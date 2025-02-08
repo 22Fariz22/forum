@@ -1,9 +1,4 @@
 # Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
 main
 
 # Test binary, built with `go test -c`
@@ -11,7 +6,6 @@ main
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-
 
 # .env
 pgdata
