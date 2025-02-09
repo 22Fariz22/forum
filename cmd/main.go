@@ -28,12 +28,11 @@ func main() {
 		repo = p
 	} else {
 		repo = repository.NewInMemoryRepository()
+		repo.SeedData()
 	}
 
 	// Инициализируем резолвер с хранилищем и системой pubsub для подписок
 	resolver := graph.NewResolver(repo)
-	// Здесь используется сгенерированный схематический сервер gqlgen. После создания схемы выполнить:
-	//   go run github.com/99designs/gqlgen
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
 
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))

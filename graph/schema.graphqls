@@ -14,7 +14,7 @@ type Post {
   title: String!
   content: String!
   allowComments: Boolean!
-  author: User!
+  authorID: ID!
   # Пагинация комментариев (только верхнего уровня)
   comments(limit: Int = 10, offset: Int = 0): [Comment!]!
 }
@@ -39,14 +39,15 @@ type Mutation {
     title: String!
     content: String!
     allowComments: Boolean!
-    author: String!
+    author: ID!
   ): Post!
   createComment(
     postID: ID!
     parentID: ID
     content: String!
-    author: String!
+    author: ID!
   ): Comment!
+  createUser(username: String!): User!
 }
 
 type Subscription {

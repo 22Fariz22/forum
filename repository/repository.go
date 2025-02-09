@@ -4,6 +4,10 @@ import "github.com/22Fariz22/forum/internal/model"
 
 // Repository – интерфейс для работы с постами и комментариями
 type Repository interface {
+	//методы для пользователя
+	CreateUser(user *model.User) error
+	GetUserByID(id string) error
+
 	// Методы для постов
 	CreatePost(post *model.Post) error
 	GetPosts() ([]*model.Post, error)
@@ -15,4 +19,7 @@ type Repository interface {
 	GetCommentsByPostID(postID string, limit, offset int) ([]*model.Comment, error)
 	// Получаем вложенные комментарии для родительского комментария с пагинацией
 	GetCommentsByParentID(parentID string, limit, offset int) ([]*model.Comment, error)
+
+	//создаем данные
+	SeedData()
 }

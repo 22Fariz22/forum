@@ -23,6 +23,16 @@ func NewPostgresRepository(connStr string) (Repository, error) {
 	return &PostgresRepository{db: db}, nil
 }
 
+func (r *PostgresRepository) CreateUser(user *model.User) error {
+
+	return nil
+}
+
+func (r *PostgresRepository) GetUserByID(id string) error {
+
+	return nil
+}
+
 func (r *PostgresRepository) CreatePost(post *model.Post) error {
 	_, err := r.db.Exec("INSERT INTO posts (id, title, content, allow_comments) VALUES ($1, $2, $3, $4)",
 		post.ID, post.Title, post.Content, post.AllowComments)
@@ -105,3 +115,5 @@ func (r *PostgresRepository) GetCommentsByParentID(parentID string, limit, offse
 	}
 	return comments, nil
 }
+
+func (r *PostgresRepository) SeedData() {}

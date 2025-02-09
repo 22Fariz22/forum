@@ -19,7 +19,7 @@ type Post struct {
 	Title         string     `json:"title"`
 	Content       string     `json:"content"`
 	AllowComments bool       `json:"allowComments"`
-	Author        *User      `json:"author"`
+	AuthorID      string     `json:"authorID"`
 	Comments      []*Comment `json:"comments"`
 }
 
