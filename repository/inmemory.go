@@ -144,28 +144,6 @@ func (r *InMemoryRepository) ReplyToComment(ctx context.Context, comment *model.
 	return comment, nil
 }
 
-// // CreateComment добавляет комментарий, если автор и пост существуют
-// func (r *InMemoryRepository) CreateComment(comment *model.Comment) error {
-// 	r.mu.Lock()
-// 	defer r.mu.Unlock()
-//
-// 	if _, err := r.GetUserByID(comment.Author.ID); err != nil {
-// 		fmt.Println("User not found, cannot create comment:", comment.Author.ID)
-// 		return err // Пользователь не найден
-// 	}
-//
-// 	if _, exists := r.posts[comment.PostID]; !exists {
-// 		return errors.New("post not found")
-// 	}
-//
-// 	r.Comments[comment.ID] = comment
-//
-// 	// Уведомляем подписчиков
-// 	go r.NotifySubscribers(comment.PostID, comment)
-//
-// 	return nil
-// }
-
 // NotifySubscribers отправляет новый комментарий подписчикам
 func (r *InMemoryRepository) NotifySubscribers(postID string, comment *model.Comment) {
 	r.mu.RLock()
@@ -217,27 +195,19 @@ func (r *InMemoryRepository) GetCommentsByPostID(postID string, limit, offset in
 	return comments[offset:end], nil
 }
 
-// GetCommentsByParentID получает вложенные комментарии
-func (r *InMemoryRepository) GetCommentsByParentID(parentID string, limit, offset int) ([]*model.Comment, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+// GetReplies возвращает вложенные комментарии по parentID
+func (r *InMemoryRepository) GetReplies(parentID string) ([]*model.Comment, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
-	var comments []*model.Comment
+	var replies []*model.Comment
 	for _, comment := range r.Comments {
 		if comment.ParentID != nil && *comment.ParentID == parentID {
-			comments = append(comments, comment)
+			replies = append(replies, comment)
 		}
 	}
 
-	// Пагинация
-	if offset >= len(comments) {
-		return []*model.Comment{}, nil
-	}
-	end := offset + limit
-	if end > len(comments) {
-		end = len(comments)
-	}
-	return comments[offset:end], nil
+	return replies, nil
 }
 
 func (r *InMemoryRepository) SeedData() {

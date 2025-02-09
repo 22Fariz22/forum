@@ -20,11 +20,10 @@ type Repository interface {
 	// Методы для комментариев
 	CreateCommentOnPost(ctx context.Context, comment *model.Comment) (*model.Comment, error)
 	ReplyToComment(ctx context.Context, comment *model.Comment) (*model.Comment, error)
+	GetReplies(parentID string) ([]*model.Comment, error)
 
-	// Получаем комментарии верхнего уровня для поста с пагинацией
+	// // Получаем комментарии верхнего уровня для поста с пагинацией
 	GetCommentsByPostID(postID string, limit, offset int) ([]*model.Comment, error)
-	// Получаем вложенные комментарии для родительского комментария с пагинацией
-	GetCommentsByParentID(parentID string, limit, offset int) ([]*model.Comment, error)
 
 	//создаем данные
 	SeedData()

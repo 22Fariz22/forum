@@ -223,9 +223,29 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*graphModel.Post, 
 	}, nil
 }
 
-// CommentsByParentID is the resolver for the commentsByParentID field.
-func (r *queryResolver) CommentsByParentID(ctx context.Context, parentID string, limit *int32, offset *int32) ([]*graphModel.Comment, error) {
-	panic(fmt.Errorf("not implemented: CommentsByParentID - commentsByParentID"))
+// GetReplies возвращает вложенные комментарии
+func (r *queryResolver) GetReplies(ctx context.Context, parentID string) ([]*graphModel.Comment, error) {
+	fmt.Println("in resolver GetReplies()")
+
+	// Получаем список вложенных комментариев
+	replies, err := r.Repo.GetReplies(parentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Преобразуем их в GraphQL-модель
+	var gqlReplies []*graphModel.Comment
+	for _, c := range replies {
+		gqlReplies = append(gqlReplies, &graphModel.Comment{
+			ID:       c.ID,
+			PostID:   c.PostID,
+			ParentID: c.ParentID,
+			Content:  c.Content,
+			Author:   (*graphModel.User)(c.Author),
+		})
+	}
+
+	return gqlReplies, nil
 }
 
 // CommentAdded is the resolver for the commentAdded field.

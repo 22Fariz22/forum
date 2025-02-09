@@ -32,11 +32,7 @@ type Comment {
 type Query {
   posts: [Post!]!
   post(id: ID!): Post
-  commentsByParentID(
-    parentID: ID!
-    limit: Int = 10
-    offset: Int = 0
-  ): [Comment!]!
+  getReplies(parentID: ID!): [Comment!]!
 }
 
 type Mutation {

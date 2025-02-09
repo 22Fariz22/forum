@@ -76,9 +76,9 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		CommentsByParentID func(childComplexity int, parentID string, limit *int32, offset *int32) int
-		Post               func(childComplexity int, id string) int
-		Posts              func(childComplexity int) int
+		GetReplies func(childComplexity int, parentID string) int
+		Post       func(childComplexity int, id string) int
+		Posts      func(childComplexity int) int
 	}
 
 	Subscription struct {
@@ -100,7 +100,7 @@ type MutationResolver interface {
 type QueryResolver interface {
 	Posts(ctx context.Context) ([]*model.Post, error)
 	Post(ctx context.Context, id string) (*model.Post, error)
-	CommentsByParentID(ctx context.Context, parentID string, limit *int32, offset *int32) ([]*model.Comment, error)
+	GetReplies(ctx context.Context, parentID string) ([]*model.Comment, error)
 }
 type SubscriptionResolver interface {
 	CommentAdded(ctx context.Context, postID string) (<-chan *model.Comment, error)
@@ -269,17 +269,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Post.Title(childComplexity), true
 
-	case "Query.commentsByParentID":
-		if e.complexity.Query.CommentsByParentID == nil {
+	case "Query.getReplies":
+		if e.complexity.Query.GetReplies == nil {
 			break
 		}
 
-		args, err := ec.field_Query_commentsByParentID_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_getReplies_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.CommentsByParentID(childComplexity, args["parentID"].(string), args["limit"].(*int32), args["offset"].(*int32)), true
+		return e.complexity.Query.GetReplies(childComplexity, args["parentID"].(string)), true
 
 	case "Query.post":
 		if e.complexity.Query.Post == nil {
@@ -748,27 +748,17 @@ func (ec *executionContext) field_Query___type_argsName(
 	return zeroVal, nil
 }
 
-func (ec *executionContext) field_Query_commentsByParentID_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+func (ec *executionContext) field_Query_getReplies_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := ec.field_Query_commentsByParentID_argsParentID(ctx, rawArgs)
+	arg0, err := ec.field_Query_getReplies_argsParentID(ctx, rawArgs)
 	if err != nil {
 		return nil, err
 	}
 	args["parentID"] = arg0
-	arg1, err := ec.field_Query_commentsByParentID_argsLimit(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["limit"] = arg1
-	arg2, err := ec.field_Query_commentsByParentID_argsOffset(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["offset"] = arg2
 	return args, nil
 }
-func (ec *executionContext) field_Query_commentsByParentID_argsParentID(
+func (ec *executionContext) field_Query_getReplies_argsParentID(
 	ctx context.Context,
 	rawArgs map[string]any,
 ) (string, error) {
@@ -778,32 +768,6 @@ func (ec *executionContext) field_Query_commentsByParentID_argsParentID(
 	}
 
 	var zeroVal string
-	return zeroVal, nil
-}
-
-func (ec *executionContext) field_Query_commentsByParentID_argsLimit(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*int32, error) {
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
-	if tmp, ok := rawArgs["limit"]; ok {
-		return ec.unmarshalOInt2ᚖint32(ctx, tmp)
-	}
-
-	var zeroVal *int32
-	return zeroVal, nil
-}
-
-func (ec *executionContext) field_Query_commentsByParentID_argsOffset(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*int32, error) {
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("offset"))
-	if tmp, ok := rawArgs["offset"]; ok {
-		return ec.unmarshalOInt2ᚖint32(ctx, tmp)
-	}
-
-	var zeroVal *int32
 	return zeroVal, nil
 }
 
@@ -1951,8 +1915,8 @@ func (ec *executionContext) fieldContext_Query_post(ctx context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_commentsByParentID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_commentsByParentID(ctx, field)
+func (ec *executionContext) _Query_getReplies(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_getReplies(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1965,7 +1929,7 @@ func (ec *executionContext) _Query_commentsByParentID(ctx context.Context, field
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().CommentsByParentID(rctx, fc.Args["parentID"].(string), fc.Args["limit"].(*int32), fc.Args["offset"].(*int32))
+		return ec.resolvers.Query().GetReplies(rctx, fc.Args["parentID"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1982,7 +1946,7 @@ func (ec *executionContext) _Query_commentsByParentID(ctx context.Context, field
 	return ec.marshalNComment2ᚕᚖgithubᚗcomᚋ22Fariz22ᚋforumᚋgraphᚋmodelᚐCommentᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_commentsByParentID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_getReplies(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -2013,7 +1977,7 @@ func (ec *executionContext) fieldContext_Query_commentsByParentID(ctx context.Co
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_commentsByParentID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_getReplies_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -4541,7 +4505,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "commentsByParentID":
+		case "getReplies":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -4550,7 +4514,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_commentsByParentID(ctx, field)
+				res = ec._Query_getReplies(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
