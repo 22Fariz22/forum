@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -41,7 +42,7 @@ func (r *InMemoryRepository) CreateUser(user *model.User) error {
 }
 
 // GetUserByID проверяет существование пользователя
-func (r *InMemoryRepository) GetUserByID(id string) error {
+func (r *InMemoryRepository) GetUserByID(id string) (*model.User, error) {
 	fmt.Println("in InMemoryRepository GetUserByID()", "id:", id)
 	r.mu.RLock()
 	defer func() {
@@ -49,12 +50,15 @@ func (r *InMemoryRepository) GetUserByID(id string) error {
 		r.mu.RUnlock()
 	}()
 
-	if _, exists := r.users[id]; !exists {
+	user, exists := r.users[id]
+
+	if !exists {
 		fmt.Println("user not found:", id)
-		return errors.New("user not found")
+		return nil, errors.New("user not found")
 	}
-	fmt.Println("user found:", id)
-	return nil
+
+	fmt.Println("user found:", user.ID, user.Username)
+	return user, nil
 }
 
 // CreatePost добавляет новый пост, если автор существует
@@ -62,7 +66,7 @@ func (r *InMemoryRepository) CreatePost(post *model.Post) error {
 	fmt.Println("in InMemoryRepository CreatePost()")
 
 	// Проверяем существование пользователя перед созданием поста
-	err := r.GetUserByID(post.AuthorID)
+	_, err := r.GetUserByID(post.AuthorID)
 	if err != nil {
 		fmt.Println("User not found, cannot create post:", post.AuthorID)
 		return err
@@ -98,27 +102,69 @@ func (r *InMemoryRepository) GetPostByID(id string) (*model.Post, error) {
 	return nil, errors.New("пост не найден")
 }
 
-// CreateComment добавляет комментарий, если автор и пост существуют
-func (r *InMemoryRepository) CreateComment(comment *model.Comment) error {
+// CreateCommentOnPost добавляет комментарий к посту
+func (r *InMemoryRepository) CreateCommentOnPost(ctx context.Context, comment *model.Comment) (*model.Comment, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if err := r.GetUserByID(comment.Author.ID); err != nil {
-		fmt.Println("User not found, cannot create comment:", comment.Author.ID)
-		return err // Пользователь не найден
-	}
-
+	// Проверяем, существует ли пост
 	if _, exists := r.posts[comment.PostID]; !exists {
-		return errors.New("post not found")
+		return nil, errors.New("пост не найден")
 	}
 
+	// Добавляем комментарий
 	r.Comments[comment.ID] = comment
+
+	// Обновляем флаг наличия комментариев у поста
+	r.posts[comment.PostID].HaveComments = true
 
 	// Уведомляем подписчиков
 	go r.NotifySubscribers(comment.PostID, comment)
 
-	return nil
+	return comment, nil
 }
+
+// ReplyToComment добавляет ответ на комментарий
+func (r *InMemoryRepository) ReplyToComment(ctx context.Context, comment *model.Comment) (*model.Comment, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Проверяем, существует ли родительский комментарий
+	parentComment, exists := r.Comments[*comment.ParentID]
+	if !exists {
+		return nil, errors.New("родительский комментарий не найден")
+	}
+
+	// Добавляем комментарий
+	r.Comments[comment.ID] = comment
+
+	// Устанавливаем флаг, что у родительского комментария есть ответы
+	parentComment.HaveComments = true
+
+	return comment, nil
+}
+
+// // CreateComment добавляет комментарий, если автор и пост существуют
+// func (r *InMemoryRepository) CreateComment(comment *model.Comment) error {
+// 	r.mu.Lock()
+// 	defer r.mu.Unlock()
+//
+// 	if _, err := r.GetUserByID(comment.Author.ID); err != nil {
+// 		fmt.Println("User not found, cannot create comment:", comment.Author.ID)
+// 		return err // Пользователь не найден
+// 	}
+//
+// 	if _, exists := r.posts[comment.PostID]; !exists {
+// 		return errors.New("post not found")
+// 	}
+//
+// 	r.Comments[comment.ID] = comment
+//
+// 	// Уведомляем подписчиков
+// 	go r.NotifySubscribers(comment.PostID, comment)
+//
+// 	return nil
+// }
 
 // NotifySubscribers отправляет новый комментарий подписчикам
 func (r *InMemoryRepository) NotifySubscribers(postID string, comment *model.Comment) {
@@ -194,102 +240,6 @@ func (r *InMemoryRepository) GetCommentsByParentID(parentID string, limit, offse
 	return comments[offset:end], nil
 }
 
-// func (r *InMemoryRepository) SeedData() {
-// 	r.mu.Lock()
-// 	defer r.mu.Unlock()
-//
-// 	fmt.Println("Seeding initial data...")
-//
-// 	// Создаём пользователей
-// 	user1 := &model.User{ID: uuid.New().String(), Username: "Alice"}
-// 	user2 := &model.User{ID: uuid.New().String(), Username: "Bob"}
-// 	user3 := &model.User{ID: uuid.New().String(), Username: "Charlie"}
-//
-// 	r.users[user1.ID] = user1
-// 	r.users[user2.ID] = user2
-// 	r.users[user3.ID] = user3
-//
-// 	// Создаём посты
-// 	post1 := &model.Post{
-// 		ID:            uuid.New().String(),
-// 		Title:         "Пост про собаку",
-// 		Content:       "Собаку зовут Бобик",
-// 		AllowComments: true,
-// 		AuthorID:      user1.ID,
-// 		Comments:      []*model.Comment{},
-// 	}
-//
-// 	post2 := &model.Post{
-// 		ID:            uuid.New().String(),
-// 		Title:         "Пост про хомяка",
-// 		Content:       "Хомяка зовут вжик",
-// 		AllowComments: true,
-// 		AuthorID:      user2.ID,
-// 		Comments:      []*model.Comment{},
-// 	}
-//
-// 	post3 := &model.Post{
-// 		ID:            uuid.New().String(),
-// 		Title:         "Про кота",
-// 		Content:       "Кота зовут Мурка",
-// 		AllowComments: true,
-// 		AuthorID:      user3.ID,
-// 		Comments:      []*model.Comment{},
-// 	}
-//
-// 	r.posts[post1.ID] = post1
-// 	r.posts[post2.ID] = post2
-// 	r.posts[post3.ID] = post3
-//
-// 	// Создаём комментарии
-// 	comment1 := &model.Comment{
-// 		ID:       uuid.New().String(),
-// 		PostID:   post1.ID,
-// 		ParentID: nil,
-// 		Content:  "Какого цвета собака?",
-// 		Author:   user2,
-// 		Children: []*model.Comment{},
-// 	}
-//
-// 	comment2 := &model.Comment{
-// 		ID:       uuid.New().String(),
-// 		PostID:   post1.ID,
-// 		ParentID: nil,
-// 		Content:  "Черный",
-// 		Author:   user1,
-// 		Children: []*model.Comment{},
-// 	}
-//
-// 	comment3 := &model.Comment{
-// 		ID:       uuid.New().String(),
-// 		PostID:   post1.ID,
-// 		ParentID: &comment1.ID,
-// 		Content:  "Красивый!",
-// 		Author:   user3,
-// 		Children: []*model.Comment{},
-// 	}
-//
-// 	comment4 := &model.Comment{
-// 		ID:       uuid.New().String(),
-// 		PostID:   post2.ID,
-// 		ParentID: &comment1.ID,
-// 		Content:  "очень шустрый хомяк",
-// 		Author:   user3,
-// 		Children: []*model.Comment{},
-// 	}
-// 	// Добавляем комментарии в пост
-// 	post1.Comments = append(post1.Comments, comment1, comment2, comment3, comment4)
-// 	comment1.Children = append(comment1.Children, comment3)
-//
-// 	// Добавляем в общую структуру
-// 	r.Comments[comment1.ID] = comment1
-// 	r.Comments[comment2.ID] = comment2
-// 	r.Comments[comment3.ID] = comment3
-// 	r.Comments[comment4.ID] = comment4
-//
-// 	fmt.Println("Seeding completed.")
-// }
-
 func (r *InMemoryRepository) SeedData() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -324,7 +274,6 @@ func (r *InMemoryRepository) SeedData() {
 		ParentID: nil,
 		Content:  "Какого цвета собака?",
 		Author:   user2,
-		Children: []*model.Comment{},
 	}
 
 	comment2 := &model.Comment{
@@ -333,7 +282,6 @@ func (r *InMemoryRepository) SeedData() {
 		ParentID: nil,
 		Content:  "Черный",
 		Author:   user1,
-		Children: []*model.Comment{},
 	}
 
 	// Вложенные комментарии к `comment2`
@@ -343,7 +291,6 @@ func (r *InMemoryRepository) SeedData() {
 		ParentID: &comment2.ID,
 		Content:  "Классный цвет!",
 		Author:   user3,
-		Children: []*model.Comment{},
 	}
 
 	comment6 := &model.Comment{
@@ -352,12 +299,10 @@ func (r *InMemoryRepository) SeedData() {
 		ParentID: &comment2.ID,
 		Content:  "Люблю черных собак!",
 		Author:   user2,
-		Children: []*model.Comment{},
 	}
 
 	// Добавляем комментарии в пост
 	post1.Comments = append(post1.Comments, comment1, comment2)
-	comment2.Children = append(comment2.Children, comment5, comment6) // ВАЖНО!
 
 	// Добавляем в общую структуру
 	r.Comments[comment1.ID] = comment1

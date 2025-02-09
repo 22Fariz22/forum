@@ -210,6 +210,7 @@ type Post {
   content: String!
   allowComments: Boolean!
   authorID: ID!
+  haveComments: Boolean!
   # Пагинация комментариев (только верхнего уровня)
   comments(limit: Int = 10, offset: Int = 0): [Comment!]!
 }
@@ -220,13 +221,17 @@ type Comment {
   parentID: ID
   content: String!
   author: User!
-  # Для вложенных комментариев
-  children(limit: Int = 10, offset: Int = 0): [Comment!]!
+  haveComments: Boolean!
 }
 
 type Query {
   posts: [Post!]!
   post(id: ID!): Post
+  commentsByParentID(
+    parentID: ID!
+    limit: Int = 10
+    offset: Int = 0
+  ): [Comment!]!
 }
 
 type Mutation {
@@ -236,12 +241,8 @@ type Mutation {
     allowComments: Boolean!
     author: ID!
   ): Post!
-  createComment(
-    postID: ID!
-    parentID: ID
-    content: String!
-    author: ID!
-  ): Comment!
+  createCommentOnPost(postID: ID!, content: String!, author: ID!): Comment!
+  replyToComment(parentID: ID!, content: String!, author: ID!): Comment!
   createUser(username: String!): User!
 }
 

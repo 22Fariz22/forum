@@ -11,7 +11,6 @@ import (
 
 	graphModel "github.com/22Fariz22/forum/graph/model"
 	commonModel "github.com/22Fariz22/forum/internal/model"
-	"github.com/22Fariz22/forum/repository"
 	"github.com/google/uuid"
 )
 
@@ -21,7 +20,8 @@ func (r *mutationResolver) CreatePost(ctx context.Context, title string, content
 	fmt.Println("in resolver CreatePost()")
 
 	// Проверяем, существует ли пользователь с таким ID
-	if err := r.Repo.GetUserByID(author); err != nil {
+	_, err := r.Repo.GetUserByID(author)
+	if err != nil {
 		return nil, errors.New("пользователь не найден")
 	}
 
@@ -33,12 +33,6 @@ func (r *mutationResolver) CreatePost(ctx context.Context, title string, content
 		AuthorID:      author,
 	}
 
-	//сохраняем в базе
-	err := r.Repo.CreatePost(newPost)
-	if err != nil {
-		return nil, err
-	}
-
 	newPostQLModel := &graphModel.Post{
 		ID:            newPost.ID,
 		Title:         newPost.Title,
@@ -47,15 +41,92 @@ func (r *mutationResolver) CreatePost(ctx context.Context, title string, content
 		AuthorID:      author,
 	}
 
+	//сохраняем в базе
+	err = r.Repo.CreatePost(newPost)
+	if err != nil {
+		//internalErrorServer 500
+		return nil, err
+	}
+
 	return newPostQLModel, nil
 }
 
-// CreateComment
-func (r *mutationResolver) CreateComment(ctx context.Context, postID string, parentID *string, content string, author string) (*graphModel.Comment, error) {
-	panic(fmt.Errorf("not implemented: CreateComment - createComment"))
+// CreateCommentOnPost создаёт комментарий к посту
+func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID string, content string, author string) (*graphModel.Comment, error) {
+	fmt.Println("in resolver CreateCommentOnPost()")
+
+	// Проверяем, существует ли пользователь с таким ID
+	user, err := r.Repo.GetUserByID(author)
+	if err != nil {
+		return nil, errors.New("пользователь не найден")
+	}
+
+	// Проверяем, существует ли пост
+	_, err = r.Repo.GetPostByID(postID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Создаём комментарий
+	comment := &commonModel.Comment{
+		ID:      uuid.New().String(),
+		PostID:  postID,
+		Content: content,
+		Author:  user,
+	}
+
+	// Добавляем комментарий
+	c, err := r.Repo.CreateCommentOnPost(context.Background(), comment)
+	if err != nil {
+		return nil, err
+	}
+
+	return &graphModel.Comment{
+		ID:      c.ID,
+		PostID:  c.PostID,
+		Content: c.Content,
+		Author:  (*graphModel.User)(c.Author),
+	}, nil
 }
 
-// CreateUser
+// ReplyToComment создаёт ответ на комментарий
+func (r *mutationResolver) ReplyToComment(ctx context.Context, parentID string, content string, author string) (*graphModel.Comment, error) {
+	fmt.Println("in resolver ReplyToComment()")
+
+	// Проверяем, существует ли пользователь с таким ID
+	user, err := r.Repo.GetUserByID(author)
+	if err != nil {
+		return nil, errors.New("пользователь не найден")
+	}
+
+	// // Проверяем, существует ли родительский комментарий
+	// if _, exists := r.Repo.Comments[parentID]; !exists {
+	// 	return nil, errors.New("parent comment not found")
+	// }
+
+	// Создаём вложенный комментарий
+	comment := &commonModel.Comment{
+		ID:       uuid.New().String(),
+		ParentID: &parentID,
+		Content:  content,
+		Author:   user,
+	}
+
+	// Добавляем комментарий
+	c, err := r.Repo.ReplyToComment(context.Background(), comment)
+	if err != nil {
+		return nil, err
+	}
+
+	return &graphModel.Comment{
+		ID:      c.ID,
+		PostID:  c.PostID,
+		Content: c.Content,
+		Author:  (*graphModel.User)(c.Author),
+	}, nil
+}
+
+// CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, username string) (*graphModel.User, error) {
 	fmt.Println("in resolver CreateUser()")
 
@@ -84,10 +155,11 @@ func (r *queryResolver) Posts(ctx context.Context) ([]*graphModel.Post, error) {
 	// Получаем посты из репозитория
 	posts, err := r.Repo.GetPosts()
 	if err != nil {
+		//internalErrorServer 500
 		return nil, err
 	}
 
-	// Преобразуем в GraphQL-модель
+	// Преобразуем в GraphQL-модель и добавим в список
 	var postsGraphQL []*graphModel.Post
 	for _, post := range posts {
 		postsGraphQL = append(postsGraphQL, &graphModel.Post{
@@ -95,6 +167,7 @@ func (r *queryResolver) Posts(ctx context.Context) ([]*graphModel.Post, error) {
 			Title:         post.Title,
 			Content:       post.Content,
 			AllowComments: post.AllowComments,
+			HaveComments:  post.HaveComments,
 			AuthorID:      post.AuthorID,
 		})
 	}
@@ -115,14 +188,16 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*graphModel.Post, 
 	// Загружаем комментарии с пагинацией
 	comments, err := r.Repo.GetCommentsByPostID(post.ID, 10, 0)
 	if err != nil {
+		//internalErrorServer 500
 		return nil, err
 	}
-	fmt.Println("comments in resolver:")
+
+	fmt.Println("comments in resolver:") //прологируем все комменты
 	for i, v := range comments {
-		fmt.Println(i, v.Content, v.Author.Username)
+		fmt.Println(i, v.Content, v.Author.Username, v.HaveComments)
 	}
 
-	// Преобразуем комментарии в graphModel
+	// Преобразуем комментарии в graphModel и добавим в список
 	var graphComments []*graphModel.Comment
 	for _, comment := range comments {
 		graphComments = append(graphComments, &graphModel.Comment{
@@ -134,6 +209,7 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*graphModel.Post, 
 				ID:       comment.Author.ID,
 				Username: comment.Author.Username,
 			},
+			HaveComments: comment.HaveComments,
 		})
 	}
 
@@ -147,31 +223,14 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*graphModel.Post, 
 	}, nil
 }
 
+// CommentsByParentID is the resolver for the commentsByParentID field.
+func (r *queryResolver) CommentsByParentID(ctx context.Context, parentID string, limit *int32, offset *int32) ([]*graphModel.Comment, error) {
+	panic(fmt.Errorf("not implemented: CommentsByParentID - commentsByParentID"))
+}
+
 // CommentAdded is the resolver for the commentAdded field.
 func (r *subscriptionResolver) CommentAdded(ctx context.Context, postID string) (<-chan *graphModel.Comment, error) {
-	// Подписываемся на новые комментарии в репозитории
-	commentCh := r.Repo.(*repository.InMemoryRepository).SubscribeToComments(postID)
-
-	// Создаём новый канал для преобразования типа
-	outCh := make(chan *graphModel.Comment, 1)
-
-	go func() {
-		for comment := range commentCh {
-			outCh <- &graphModel.Comment{
-				ID:       comment.ID,
-				PostID:   comment.PostID,
-				ParentID: comment.ParentID,
-				Content:  comment.Content,
-				Author: &graphModel.User{
-					ID:       comment.Author.ID,
-					Username: comment.Author.Username,
-				},
-			}
-		}
-		close(outCh) // Закрываем канал, когда подписка завершена
-	}()
-
-	return outCh, nil
+	return nil, nil
 }
 
 // Mutation returns MutationResolver implementation.

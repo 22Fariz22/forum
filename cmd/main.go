@@ -28,7 +28,6 @@ func main() {
 		repo = p
 	} else {
 		repo = repository.NewInMemoryRepository()
-		repo.SeedData()
 	}
 
 	// Инициализируем резолвер с хранилищем и системой pubsub для подписок
