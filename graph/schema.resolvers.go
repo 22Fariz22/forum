@@ -126,17 +126,20 @@ func (r *mutationResolver) ReplyToComment(ctx context.Context, parentID string, 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, username string) (*graphModel.User, error) {
 	fmt.Println("in resolver CreateUser()")
+	fmt.Println("username:", username)
 
 	user := &commonModel.User{
 		ID:       uuid.New().String(),
 		Username: username,
 	}
 
+	fmt.Println("userModel:", user)
 	// добавить проверку корректности username(HTTP-код 400 Bad Request)
 
 	// Создаем пользователя
 	if err := r.Repo.CreateUser(user); err != nil {
 		//вернуть 500 Internal Server Error
+		fmt.Println("err:", err)
 		return nil, err
 	}
 
@@ -182,6 +185,7 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*graphModel.Post, 
 	// Получаем пост
 	post, err := r.Repo.GetPostByID(id)
 	if err != nil {
+		//вернуть HTTP 404 (Not Found)
 		return nil, err
 	}
 
