@@ -58,5 +58,3 @@ func (r *PostgresRepository) GetCommentsByPostID(postID string, limit, offset in
 func (r *PostgresRepository) GetReplies(parentID string) ([]*model.Comment, error) {
 	return nil, nil
 }
-
-func (r *PostgresRepository) SeedData() {}

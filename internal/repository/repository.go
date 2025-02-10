@@ -24,7 +24,4 @@ type Repository interface {
 
 	// // Получаем комментарии верхнего уровня для поста с пагинацией
 	GetCommentsByPostID(postID string, limit, offset int) ([]*model.Comment, error)
-
-	//создаем данные
-	SeedData()
 }

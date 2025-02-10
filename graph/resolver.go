@@ -1,8 +1,8 @@
 package graph
 
 import (
+	"github.com/22Fariz22/forum/internal/repository"
 	"github.com/22Fariz22/forum/pubsub"
-	"github.com/22Fariz22/forum/repository"
 )
 
 // Repository определён в пакете repository

@@ -21,4 +21,4 @@ ENV config=docker
 
 EXPOSE 8080
 
-ENTRYPOINT CompileDaemon --build="go build cmd/main.go" --command=./main
+ENTRYPOINT CompileDaemon --build="go build cmd/api/main.go" --command=./main

@@ -96,13 +96,9 @@ func (r *mutationResolver) ReplyToComment(ctx context.Context, parentID string, 
 	// Проверяем, существует ли пользователь с таким ID
 	user, err := r.Repo.GetUserByID(author)
 	if err != nil {
+		//вернуть HTTP 404 (Not Found)
 		return nil, errors.New("пользователь не найден")
 	}
-
-	// // Проверяем, существует ли родительский комментарий
-	// if _, exists := r.Repo.Comments[parentID]; !exists {
-	// 	return nil, errors.New("parent comment not found")
-	// }
 
 	// Создаём вложенный комментарий
 	comment := &commonModel.Comment{
@@ -115,6 +111,7 @@ func (r *mutationResolver) ReplyToComment(ctx context.Context, parentID string, 
 	// Добавляем комментарий
 	c, err := r.Repo.ReplyToComment(context.Background(), comment)
 	if err != nil {
+		//если ошибка "родительский коментарий не найден", вернуть HTTP 404 (Not Found)
 		return nil, err
 	}
 
@@ -135,8 +132,11 @@ func (r *mutationResolver) CreateUser(ctx context.Context, username string) (*gr
 		Username: username,
 	}
 
+	// добавить проверку корректности username(HTTP-код 400 Bad Request)
+
 	// Создаем пользователя
 	if err := r.Repo.CreateUser(user); err != nil {
+		//вернуть 500 Internal Server Error
 		return nil, err
 	}
 

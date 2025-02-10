@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/22Fariz22/forum/internal/model"
-	"github.com/google/uuid"
 )
 
 type InMemoryRepository struct {
@@ -208,77 +207,4 @@ func (r *InMemoryRepository) GetReplies(parentID string) ([]*model.Comment, erro
 	}
 
 	return replies, nil
-}
-
-func (r *InMemoryRepository) SeedData() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	fmt.Println("Seeding initial data...")
-
-	// Создаём пользователей
-	user1 := &model.User{ID: uuid.New().String(), Username: "Alice"}
-	user2 := &model.User{ID: uuid.New().String(), Username: "Bob"}
-	user3 := &model.User{ID: uuid.New().String(), Username: "Charlie"}
-
-	r.users[user1.ID] = user1
-	r.users[user2.ID] = user2
-	r.users[user3.ID] = user3
-
-	// Создаём пост
-	post1 := &model.Post{
-		ID:            uuid.New().String(),
-		Title:         "Пост про собаку",
-		Content:       "Собаку зовут Бобик",
-		AllowComments: true,
-		AuthorID:      user1.ID,
-		Comments:      []*model.Comment{},
-	}
-
-	r.posts[post1.ID] = post1
-
-	// Создаём комментарии
-	comment1 := &model.Comment{
-		ID:       uuid.New().String(),
-		PostID:   post1.ID,
-		ParentID: nil,
-		Content:  "Какого цвета собака?",
-		Author:   user2,
-	}
-
-	comment2 := &model.Comment{
-		ID:       uuid.New().String(),
-		PostID:   post1.ID,
-		ParentID: nil,
-		Content:  "Черный",
-		Author:   user1,
-	}
-
-	// Вложенные комментарии к `comment2`
-	comment5 := &model.Comment{
-		ID:       uuid.New().String(),
-		PostID:   post1.ID,
-		ParentID: &comment2.ID,
-		Content:  "Классный цвет!",
-		Author:   user3,
-	}
-
-	comment6 := &model.Comment{
-		ID:       uuid.New().String(),
-		PostID:   post1.ID,
-		ParentID: &comment2.ID,
-		Content:  "Люблю черных собак!",
-		Author:   user2,
-	}
-
-	// Добавляем комментарии в пост
-	post1.Comments = append(post1.Comments, comment1, comment2)
-
-	// Добавляем в общую структуру
-	r.Comments[comment1.ID] = comment1
-	r.Comments[comment2.ID] = comment2
-	r.Comments[comment5.ID] = comment5
-	r.Comments[comment6.ID] = comment6
-
-	fmt.Println("Seeding completed.")
 }
