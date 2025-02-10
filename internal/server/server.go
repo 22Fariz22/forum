@@ -23,8 +23,6 @@ func NewServer(logger logger.Logger, cfg *config.Config, resolver *graph.Resolve
 }
 
 func (s *Server) Run() {
-	// serverAddr := fmt.Sprintf("%s:%s", s.cfg.Server.BaseUrl, s.cfg.Server.Port)
-
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: s.resolver}))
 
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
@@ -32,15 +30,4 @@ func (s *Server) Run() {
 
 	s.logger.Infof("Сервер запущен на %s", ":8080")
 	s.logger.Error(http.ListenAndServe(":8080", nil))
-
-	// quit := make(chan os.Signal, 1)
-	// signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	//
-	// <-quit
-	//
-	// ctx, shutdown := context.WithTimeout(context.Background(), s.cfg.Server.CtxTimeout)
-	// defer shutdown()
-	//
-	// s.logger.Info("Server Exited Properly")
-	// return s.echo.Server.Shutdown(ctx)
 }

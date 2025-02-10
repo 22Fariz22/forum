@@ -14,9 +14,6 @@ import (
 )
 
 func main() {
-	// addr := flag.String("addr", ":8080", "Адрес сервера")
-	// flag.Parse()
-
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
@@ -82,13 +79,4 @@ func main() {
 
 	s := server.NewServer(appLogger, cfg, resolver)
 	s.Run() //сделать возврат ошибки
-	/*
-	   srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
-
-	   http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	   http.Handle("/query", srv)
-
-	   log.Printf("Сервер запущен на %s", *addr)
-	   log.Fatal(http.ListenAndServe(*addr, nil))
-	*/
 }

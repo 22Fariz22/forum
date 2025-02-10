@@ -7,13 +7,14 @@ type User struct {
 
 // Post – модель поста
 type Post struct {
-	ID            string     `json:"id" gorm:"primaryKey;type:uuid"`
-	Title         string     `json:"title" gorm:"type:varchar(50);not null"`
-	Content       string     `json:"content" gorm:"type:text;not null"`
-	AllowComments bool       `json:"allowComments" gorm:"default:true"`
-	AuthorID      string     `json:"authorID" gorm:"type:uuid;not null"`
-	HaveComments  bool       `json:"haveComments" gorm:"default:false"`
-	Comments      []*Comment `json:"comments" gorm:"foreignKey:PostID"`
+	ID            string `json:"id" gorm:"primaryKey;type:uuid"`
+	Title         string `json:"title" gorm:"type:varchar(50);not null"`
+	Content       string `json:"content" gorm:"type:text;not null"`
+	AllowComments bool   `json:"allowComments" gorm:"default:true"`
+	AuthorID      string `json:"authorID" gorm:"type:uuid;not null"`
+	HaveComments  bool   `json:"haveComments" gorm:"default:false"`
+	// Comments      []*Comment `json:"comments" gorm:"foreignKey:PostID"`
+	Comments []*Comment `json:"comments" gorm:"-"`
 }
 
 // Comment – модель комментария
@@ -23,5 +24,7 @@ type Comment struct {
 	ParentID     *string `json:"parentID" gorm:"type:uuid"` // Если nil, то комментарий верхнего уровня
 	Content      string  `json:"content" gorm:"type:text;not null"`
 	Author       *User   `json:"author" gorm:"-"`
+	AuthorID     string  `json:"authorID" gorm:"foreignKey:AuthorID;references:ID"`
+	Username     string  `json:"username" gorm:"type:varchar(20);not null"`
 	HaveComments bool    `json:"haveComments" gorm:"default:false"`
 }

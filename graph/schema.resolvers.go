@@ -78,8 +78,10 @@ func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID strin
 	// Добавляем комментарий
 	c, err := r.Repo.CreateCommentOnPost(context.Background(), comment)
 	if err != nil {
+		fmt.Println("err in resolver call on r.Repo.CreateCommentOnPost: ", err)
 		return nil, err
 	}
+	fmt.Println("c in resolver :", c)
 
 	return &graphModel.Comment{
 		ID:      c.ID,
