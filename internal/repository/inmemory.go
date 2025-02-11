@@ -4,14 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
+	"time"
 
 	"github.com/22Fariz22/forum/internal/model"
 )
 
 type InMemoryRepository struct {
 	users       map[string]*model.User
-	posts       map[string]*model.Post
+	posts       map[string]*model.Post // храним посты по ID(выдаем при просмотре одного поста за O(1))
+	sortedPosts []*model.Post          // Храним посты отсортированными по CreatedAt(при просмотре всех постов за О(1))
 	Comments    map[string]*model.Comment
 	subscribers map[string][]chan *model.Comment
 	mu          sync.RWMutex
@@ -65,9 +68,23 @@ func (r *InMemoryRepository) CreatePost(post *model.Post) error {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
+	post.CreatedAt = time.Now()
 	r.posts[post.ID] = post
+
+	// Добавляем в slice и сортируем
+	r.sortedPosts = append(r.sortedPosts, post)
+
+	// Вызываем сортировку
+	r.sortPosts()
+
 	return nil
+}
+
+// sortPosts сортирует r.sortedPosts по CreatedAt (новые сверху)
+func (r *InMemoryRepository) sortPosts() {
+	sort.Slice(r.sortedPosts, func(i, j int) bool {
+		return r.sortedPosts[i].CreatedAt.After(r.sortedPosts[j].CreatedAt)
+	})
 }
 
 // GetPosts возвращает все посты
@@ -75,20 +92,18 @@ func (r *InMemoryRepository) GetPosts() ([]*model.Post, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	posts := make([]*model.Post, 0, len(r.posts))
-	for _, post := range r.posts {
-		posts = append(posts, post)
-	}
-	return posts, nil
+	return r.sortedPosts, nil
 }
 
 // GetPostByID возвращает пост по ID
 func (r *InMemoryRepository) GetPostByID(id string) (*model.Post, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+
 	if post, exists := r.posts[id]; exists {
 		return post, nil
 	}
+
 	return nil, errors.New("пост не найден")
 }
 
@@ -107,6 +122,9 @@ func (r *InMemoryRepository) CreateCommentOnPost(ctx context.Context, comment *m
 
 	// Обновляем флаг наличия комментариев у поста
 	r.posts[comment.PostID].HaveComments = true
+
+	//добавляем время создания
+	comment.CreatedAt = time.Now()
 
 	// Уведомляем подписчиков
 	go r.NotifySubscribers(comment.PostID, comment)
