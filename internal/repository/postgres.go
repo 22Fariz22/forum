@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	// "time"
 
 	"github.com/22Fariz22/forum/internal/model"
 	"github.com/jmoiron/sqlx"
@@ -32,8 +33,8 @@ func (r *PostgresRepository) CreateUser(user *model.User) error {
 
 	// SQL-запрос для вставки пользователя
 	query := `
-		INSERT INTO users (id, username)
-		VALUES ($1, $2)
+		INSERT INTO users (id, username, created_at)
+		VALUES ($1, $2, NOW())
 	`
 
 	// Выполняем запрос
@@ -76,7 +77,15 @@ func (r *PostgresRepository) CreatePost(post *model.Post) error {
 	`
 
 	// Выполняем запрос
-	_, err := r.db.Exec(query, post.ID, post.Title, post.Content, post.AllowComments, post.HaveComments, post.AuthorID)
+	_, err := r.db.Exec(
+		query,
+		post.ID,
+		post.Title,
+		post.Content,
+		post.AllowComments,
+		post.HaveComments,
+		post.AuthorID,
+	)
 	if err != nil {
 		// Обрабатываем ошибки
 		switch {
@@ -93,8 +102,9 @@ func (r *PostgresRepository) CreatePost(post *model.Post) error {
 // GetPosts получаем все посты
 func (r *PostgresRepository) GetPosts() ([]*model.Post, error) {
 	query := `
-		SELECT id, title, content, allow_comments, author_id, have_comments
+		SELECT id, title, content, allow_comments, author_id, have_comments, created_at
 		FROM posts
+		ORDER BY created_at ASC
 	`
 
 	rows, err := r.db.Query(query)
@@ -113,6 +123,7 @@ func (r *PostgresRepository) GetPosts() ([]*model.Post, error) {
 			&post.AllowComments,
 			&post.AuthorID,
 			&post.HaveComments,
+			&post.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan post: %w", err)
@@ -130,7 +141,7 @@ func (r *PostgresRepository) GetPosts() ([]*model.Post, error) {
 // GetPostByID получаем конкретный пост по post_id
 func (r *PostgresRepository) GetPostByID(id string) (*model.Post, error) {
 	query := `
-		SELECT id, title, content, allow_comments, author_id, have_comments
+		SELECT id, title, content, allow_comments, author_id, have_comments, created_at
 		FROM posts
 		WHERE id = $1
 	`
@@ -143,6 +154,7 @@ func (r *PostgresRepository) GetPostByID(id string) (*model.Post, error) {
 		&post.AllowComments,
 		&post.AuthorID,
 		&post.HaveComments,
+		&post.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -158,6 +170,7 @@ func (r *PostgresRepository) GetPostByID(id string) (*model.Post, error) {
 	}
 
 	post.Comments = comments
+
 	return post, nil
 }
 
@@ -248,10 +261,10 @@ func (r *PostgresRepository) ReplyToComment(ctx context.Context, comment *model.
 func (r *PostgresRepository) GetCommentsByPostID(postID string, limit, offset int) ([]*model.Comment, error) {
 	// SQL-запрос для получения комментариев с пагинацией
 	query := `
-		SELECT id, post_id, parent_id, content, author_id, username, have_comments
+		SELECT id, post_id, parent_id, content, author_id, username, have_comments, created_at
 		FROM comments
 		WHERE post_id = $1 and parent_id IS NULL 
-		ORDER BY id DESC
+		ORDER BY created_at ASC
 		LIMIT $2 OFFSET $3
 	`
 
@@ -276,6 +289,7 @@ func (r *PostgresRepository) GetCommentsByPostID(postID string, limit, offset in
 			&comment.AuthorID,
 			&comment.Username,
 			&comment.HaveComments,
+			&comment.CreatedAt,
 		)
 		if err != nil {
 			fmt.Printf("Error during scan: %v\n", err)
@@ -303,10 +317,10 @@ func (r *PostgresRepository) GetCommentsByPostID(postID string, limit, offset in
 func (r *PostgresRepository) GetReplies(parentID string) ([]*model.Comment, error) {
 	// SQL-запрос для получения вложенных комментариев
 	query := `
-		SELECT id, post_id, parent_id, content, author_id, username, have_comments
+		SELECT id, post_id, parent_id, content, author_id, username, have_comments, created_at
 		FROM comments
 		WHERE parent_id = $1 
-		ORDER BY id DESC
+		ORDER BY created_at ASC
 	`
 
 	// Выполняем запрос
@@ -329,6 +343,7 @@ func (r *PostgresRepository) GetReplies(parentID string) ([]*model.Comment, erro
 			&comment.AuthorID,
 			&comment.Username,
 			&comment.HaveComments,
+			&comment.CreatedAt,
 		)
 		if err != nil {
 			fmt.Printf("Error during scan: %v\n", err)

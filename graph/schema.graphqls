@@ -4,9 +4,12 @@ schema {
   subscription: Subscription
 }
 
+scalar Time
+
 type User {
   id: ID!
   username: String!
+  createdAt: Time!
 }
 
 type Post {
@@ -16,6 +19,7 @@ type Post {
   allowComments: Boolean!
   authorID: ID!
   haveComments: Boolean!
+  createdAt: Time!
   # Пагинация комментариев (только верхнего уровня)
   comments(limit: Int = 10, offset: Int = 0): [Comment!]!
 }
@@ -26,6 +30,7 @@ type Comment {
   parentID: ID
   content: String!
   author: User!
+  createdAt: Time!
   haveComments: Boolean!
 }
 

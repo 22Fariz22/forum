@@ -49,8 +49,6 @@ func (r *mutationResolver) CreatePost(ctx context.Context, title string, content
 
 // CreateCommentOnPost создаёт комментарий к посту
 func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID string, content string, author string) (*graphModel.Comment, error) {
-	fmt.Println("in resolver CreateCommentOnPost()")
-
 	// Проверяем, существует ли пользователь с таким ID
 	user, err := r.Repo.GetUserByID(author)
 	if err != nil {
@@ -80,10 +78,11 @@ func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID strin
 	}
 
 	return &graphModel.Comment{
-		ID:      c.ID,
-		PostID:  c.PostID,
-		Content: c.Content,
-		Author:  (*graphModel.User)(c.Author),
+		ID:        c.ID,
+		PostID:    c.PostID,
+		Content:   c.Content,
+		Author:    (*graphModel.User)(c.Author),
+		CreatedAt: c.CreatedAt,
 	}, nil
 }
 
@@ -160,6 +159,7 @@ func (r *queryResolver) Posts(ctx context.Context) ([]*graphModel.Post, error) {
 			AllowComments: post.AllowComments,
 			HaveComments:  post.HaveComments,
 			AuthorID:      post.AuthorID,
+			CreatedAt:     post.CreatedAt,
 		})
 	}
 
@@ -193,6 +193,7 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*graphModel.Post, 
 				Username: comment.Author.Username,
 			},
 			HaveComments: comment.HaveComments,
+			CreatedAt:    comment.CreatedAt,
 		})
 	}
 
@@ -203,6 +204,7 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*graphModel.Post, 
 		AllowComments: post.AllowComments,
 		AuthorID:      post.AuthorID,
 		Comments:      graphComments,
+		CreatedAt:     post.CreatedAt,
 	}, nil
 }
 
@@ -218,11 +220,12 @@ func (r *queryResolver) GetReplies(ctx context.Context, parentID string) ([]*gra
 	var gqlReplies []*graphModel.Comment
 	for _, c := range replies {
 		gqlReplies = append(gqlReplies, &graphModel.Comment{
-			ID:       c.ID,
-			PostID:   c.PostID,
-			ParentID: c.ParentID,
-			Content:  c.Content,
-			Author:   (*graphModel.User)(c.Author),
+			ID:        c.ID,
+			PostID:    c.PostID,
+			ParentID:  c.ParentID,
+			Content:   c.Content,
+			CreatedAt: c.CreatedAt,
+			Author:    (*graphModel.User)(c.Author),
 		})
 	}
 

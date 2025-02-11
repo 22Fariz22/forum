@@ -2,13 +2,18 @@
 
 package model
 
+import (
+	"time"
+)
+
 type Comment struct {
-	ID           string  `json:"id"`
-	PostID       string  `json:"postID"`
-	ParentID     *string `json:"parentID,omitempty"`
-	Content      string  `json:"content"`
-	Author       *User   `json:"author"`
-	HaveComments bool    `json:"haveComments"`
+	ID           string    `json:"id"`
+	PostID       string    `json:"postID"`
+	ParentID     *string   `json:"parentID,omitempty"`
+	Content      string    `json:"content"`
+	Author       *User     `json:"author"`
+	CreatedAt    time.Time `json:"createdAt"`
+	HaveComments bool      `json:"haveComments"`
 }
 
 type Mutation struct {
@@ -21,6 +26,7 @@ type Post struct {
 	AllowComments bool       `json:"allowComments"`
 	AuthorID      string     `json:"authorID"`
 	HaveComments  bool       `json:"haveComments"`
+	CreatedAt     time.Time  `json:"createdAt"`
 	Comments      []*Comment `json:"comments"`
 }
 
@@ -31,6 +37,7 @@ type Subscription struct {
 }
 
 type User struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
+	ID        string    `json:"id"`
+	Username  string    `json:"username"`
+	CreatedAt time.Time `json:"createdAt"`
 }
