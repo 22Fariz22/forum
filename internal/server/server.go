@@ -28,6 +28,8 @@ func (s *Server) Run() {
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)
 
-	s.logger.Infof("Сервер запущен на %s", ":8080")
-	s.logger.Error(http.ListenAndServe(":8080", nil))
+	addr := ":" + s.cfg.Server.Port
+
+	s.logger.Infof("Сервер запущен на %s", addr)
+	s.logger.Error(http.ListenAndServe(addr, nil))
 }

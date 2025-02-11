@@ -28,7 +28,6 @@ func NewInMemoryRepository() Repository {
 
 // CreateUser добавляет нового пользователя, если его еще нет
 func (r *InMemoryRepository) CreateUser(user *model.User) error {
-	fmt.Println("in InMemoryRepository CreateUser()")
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -42,32 +41,25 @@ func (r *InMemoryRepository) CreateUser(user *model.User) error {
 
 // GetUserByID проверяет существование пользователя
 func (r *InMemoryRepository) GetUserByID(id string) (*model.User, error) {
-	fmt.Println("in InMemoryRepository GetUserByID()", "id:", id)
 	r.mu.RLock()
 	defer func() {
-		fmt.Println("unlocking GetUserByID()")
 		r.mu.RUnlock()
 	}()
 
 	user, exists := r.users[id]
 
 	if !exists {
-		fmt.Println("user not found:", id)
 		return nil, errors.New("user not found")
 	}
 
-	fmt.Println("user found:", user.ID, user.Username)
 	return user, nil
 }
 
 // CreatePost добавляет новый пост, если автор существует
 func (r *InMemoryRepository) CreatePost(post *model.Post) error {
-	fmt.Println("in InMemoryRepository CreatePost()")
-
 	// Проверяем существование пользователя перед созданием поста
 	_, err := r.GetUserByID(post.AuthorID)
 	if err != nil {
-		fmt.Println("User not found, cannot create post:", post.AuthorID)
 		return err
 	}
 
@@ -75,7 +67,6 @@ func (r *InMemoryRepository) CreatePost(post *model.Post) error {
 	defer r.mu.Unlock()
 
 	r.posts[post.ID] = post
-	fmt.Println("Post created:", post.ID)
 	return nil
 }
 
@@ -170,14 +161,12 @@ func (r *InMemoryRepository) SubscribeToComments(postID string) <-chan *model.Co
 
 // GetCommentsByPostID получает комментарии верхнего уровня
 func (r *InMemoryRepository) GetCommentsByPostID(postID string, limit, offset int) ([]*model.Comment, error) {
-	fmt.Println("call inmemory GetCommentsByPostID ")
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	var comments []*model.Comment
 	for _, comment := range r.Comments {
 		if comment.PostID == postID && comment.ParentID == nil {
-			fmt.Println("comment:", comment.Content)
 			comments = append(comments, comment)
 		}
 	}
@@ -190,7 +179,6 @@ func (r *InMemoryRepository) GetCommentsByPostID(postID string, limit, offset in
 	if end > len(comments) {
 		end = len(comments)
 	}
-	fmt.Println("ofset:", comments[offset:end])
 	return comments[offset:end], nil
 }
 

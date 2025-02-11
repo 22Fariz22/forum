@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/22Fariz22/forum/internal/model"
 	"github.com/jmoiron/sqlx"
@@ -24,9 +23,8 @@ func NewPostgresRepository(db *sqlx.DB) (Repository, error) {
 	return &PostgresRepository{db: db}, nil
 }
 
+// CreateUser создаем пользователя
 func (r *PostgresRepository) CreateUser(user *model.User) error {
-	fmt.Println("in repo pg CreateUser(). username:", user.Username)
-	fmt.Println("id type of:", reflect.TypeOf(user.ID))
 	// Проверяем, что username не пустой (это уже должно быть проверено в резолвере)
 	if user.Username == "" {
 		return fmt.Errorf("username cannot be empty")
@@ -53,6 +51,7 @@ func (r *PostgresRepository) CreateUser(user *model.User) error {
 	return nil
 }
 
+// GetUserByID получаем пользователя по ID
 func (r *PostgresRepository) GetUserByID(id string) (*model.User, error) {
 	query := `SELECT id, username FROM users WHERE id = $1`
 
@@ -68,9 +67,8 @@ func (r *PostgresRepository) GetUserByID(id string) (*model.User, error) {
 	return &user, nil
 }
 
+// CreatePost создаем пост
 func (r *PostgresRepository) CreatePost(post *model.Post) error {
-	fmt.Println("in repo pg CreatePost()")
-	fmt.Println("post:", post)
 	// SQL-запрос для вставки поста
 	query := `
 		INSERT INTO posts (id, title, content, allow_comments, have_comments, author_id)
@@ -92,8 +90,8 @@ func (r *PostgresRepository) CreatePost(post *model.Post) error {
 	return nil
 }
 
+// GetPosts получаем все посты
 func (r *PostgresRepository) GetPosts() ([]*model.Post, error) {
-	fmt.Println("in repo pg GetPosts()")
 	query := `
 		SELECT id, title, content, allow_comments, author_id, have_comments
 		FROM posts
@@ -129,9 +127,8 @@ func (r *PostgresRepository) GetPosts() ([]*model.Post, error) {
 	return posts, nil
 }
 
+// GetPostByID получаем конкретный пост по post_id
 func (r *PostgresRepository) GetPostByID(id string) (*model.Post, error) {
-	fmt.Println("in repo pg GetPostByID()")
-
 	query := `
 		SELECT id, title, content, allow_comments, author_id, have_comments
 		FROM posts
@@ -164,11 +161,8 @@ func (r *PostgresRepository) GetPostByID(id string) (*model.Post, error) {
 	return post, nil
 }
 
+// CreateCommentOnPost создаем верхнеуровневый коментарий к посту
 func (r *PostgresRepository) CreateCommentOnPost(ctx context.Context, comment *model.Comment) (*model.Comment, error) {
-	fmt.Printf("in repo CreateCommentOnPost")
-	fmt.Println("comment from resolve: ", comment)
-	fmt.Println("comment.Author:", comment.Author)
-
 	query := `
     INSERT INTO comments (id, post_id, parent_id, content, author_id,username, have_comments) 
     VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -190,14 +184,8 @@ func (r *PostgresRepository) CreateCommentOnPost(ctx context.Context, comment *m
 	return comment, nil
 }
 
+// ReplyToComment создаем вложенный коментарий, то есть ответ на коментарий
 func (r *PostgresRepository) ReplyToComment(ctx context.Context, comment *model.Comment) (*model.Comment, error) {
-	fmt.Println("in repo pg ReplyToComment()")
-	fmt.Println("comment:", comment)
-	fmt.Println("comment.Author:", comment.Author)
-	if comment.ParentID == nil {
-		fmt.Println("comment.ParentID == nil")
-	}
-
 	// Проверяем, существует ли родительский комментарий
 	var parentComment model.Comment
 	query := `
@@ -205,8 +193,6 @@ func (r *PostgresRepository) ReplyToComment(ctx context.Context, comment *model.
 		FROM comments
 		WHERE id = $1
 	`
-
-	fmt.Println("ищем comment.ParentID:", *comment.ParentID)
 
 	err := r.db.GetContext(ctx, &parentComment, query, *comment.ParentID)
 	if err != nil {
@@ -226,9 +212,7 @@ func (r *PostgresRepository) ReplyToComment(ctx context.Context, comment *model.
 		INSERT INTO comments (id, post_id, parent_id, content, author_id, username)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
-	// var parentID *string
-	fmt.Println("comment.PostID: ", comment.PostID)
-	// fmt.Printf("coment.AuthorID:%s comment.username:%s")
+
 	// Выполняем запрос на вставку
 	_, err = r.db.ExecContext(ctx, insertQuery,
 		comment.ID,
@@ -260,9 +244,8 @@ func (r *PostgresRepository) ReplyToComment(ctx context.Context, comment *model.
 	return comment, nil
 }
 
+// GetCommentsByPostID получаем верхнеуровневые коментарии к посту используя пагинацию
 func (r *PostgresRepository) GetCommentsByPostID(postID string, limit, offset int) ([]*model.Comment, error) {
-	fmt.Println("in repo GetCommentsByPostID. postID:", postID, " limit:", limit, " offset:", offset)
-
 	// SQL-запрос для получения комментариев с пагинацией
 	query := `
 		SELECT id, post_id, parent_id, content, author_id, username, have_comments
@@ -316,10 +299,8 @@ func (r *PostgresRepository) GetCommentsByPostID(postID string, limit, offset in
 	return comments, nil
 }
 
-// GetReplies получение вложенных комментариев
+// GetReplies получение вложенных комментариев по id родительского коментария
 func (r *PostgresRepository) GetReplies(parentID string) ([]*model.Comment, error) {
-	fmt.Println("in repo GetReplies. parentID:", parentID)
-
 	// SQL-запрос для получения вложенных комментариев
 	query := `
 		SELECT id, post_id, parent_id, content, author_id, username, have_comments
@@ -353,8 +334,6 @@ func (r *PostgresRepository) GetReplies(parentID string) ([]*model.Comment, erro
 			fmt.Printf("Error during scan: %v\n", err)
 			return nil, fmt.Errorf("failed to scan reply: %w", err)
 		}
-		fmt.Println("in repo comment:", &comment)
-		fmt.Println("in repo comment.Username:", comment.Username)
 
 		// Создаем объект автора
 		author := &model.User{
@@ -374,6 +353,7 @@ func (r *PostgresRepository) GetReplies(parentID string) ([]*model.Comment, erro
 	return replies, nil
 }
 
+// isDuplicateKeyError проверка дупликата
 func isDuplicateKeyError(err error) bool {
 	// PostgreSQL возвращает ошибку с кодом "23505" при нарушении уникальности
 	if err, ok := err.(*pq.Error); ok {

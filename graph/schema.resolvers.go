@@ -17,9 +17,6 @@ import (
 
 // CreatePost is the resolver for the createPost field.
 func (r *mutationResolver) CreatePost(ctx context.Context, title string, content string, allowComments bool, author string) (*graphModel.Post, error) {
-	// Создаем объект User для автора поста
-	fmt.Println("in resolver CreatePost()")
-
 	// Проверяем, существует ли пользователь с таким ID
 	_, err := r.Repo.GetUserByID(author)
 	if err != nil {
@@ -83,8 +80,6 @@ func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID strin
 		return nil, newGraphQLError("ошибка на сервере", "500")
 	}
 
-	fmt.Println("c in resolver :", c)
-
 	return &graphModel.Comment{
 		ID:      c.ID,
 		PostID:  c.PostID,
@@ -95,8 +90,6 @@ func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID strin
 
 // ReplyToComment создаёт ответ на комментарий
 func (r *mutationResolver) ReplyToComment(ctx context.Context, parentID string, content string, author string) (*graphModel.Comment, error) {
-	fmt.Println("in resolver ReplyToComment()")
-
 	// Проверяем, существует ли пользователь с таким ID
 	user, err := r.Repo.GetUserByID(author)
 	if err != nil {
@@ -127,16 +120,14 @@ func (r *mutationResolver) ReplyToComment(ctx context.Context, parentID string, 
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, username string) (*graphModel.User, error) {
-	fmt.Println("in resolver CreateUser()")
-	fmt.Println("username:", username)
-
 	user := &commonModel.User{
 		ID:       uuid.New().String(),
 		Username: username,
 	}
 
-	fmt.Println("userModel:", user)
-	// добавить проверку корректности username(HTTP-код 400 Bad Request)
+	if len(username) < 2 {
+		return nil, newGraphQLError("username должен быть длиной не меньше 2 символов", "400")
+	}
 
 	// Создаем пользователя
 	if err := r.Repo.CreateUser(user); err != nil {
@@ -154,8 +145,6 @@ func (r *mutationResolver) CreateUser(ctx context.Context, username string) (*gr
 
 // Posts is the resolver for the posts field.
 func (r *queryResolver) Posts(ctx context.Context) ([]*graphModel.Post, error) {
-	fmt.Println("Получаем все посты...")
-
 	// Получаем посты из репозитория
 	posts, err := r.Repo.GetPosts()
 	if err != nil {
@@ -180,8 +169,6 @@ func (r *queryResolver) Posts(ctx context.Context) ([]*graphModel.Post, error) {
 
 // Post is the resolver for the post field.
 func (r *queryResolver) Post(ctx context.Context, id string) (*graphModel.Post, error) {
-	fmt.Println("получаем пост ID:", id)
-
 	// Получаем пост
 	post, err := r.Repo.GetPostByID(id)
 	if err != nil {
@@ -222,8 +209,6 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*graphModel.Post, 
 
 // GetReplies возвращает вложенные комментарии
 func (r *queryResolver) GetReplies(ctx context.Context, parentID string) ([]*graphModel.Comment, error) {
-	fmt.Println("in resolver GetReplies()")
-
 	// Получаем список вложенных комментариев
 	replies, err := r.Repo.GetReplies(parentID)
 	if err != nil {
@@ -233,7 +218,6 @@ func (r *queryResolver) GetReplies(ctx context.Context, parentID string) ([]*gra
 	// Преобразуем их в GraphQL-модель
 	var gqlReplies []*graphModel.Comment
 	for _, c := range replies {
-		fmt.Println("coment in resolver:", c.Username)
 		gqlReplies = append(gqlReplies, &graphModel.Comment{
 			ID:       c.ID,
 			PostID:   c.PostID,
