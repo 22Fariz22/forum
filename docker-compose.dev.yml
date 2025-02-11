@@ -1,0 +1,38 @@
+services:
+  web:
+    container_name: api
+    build:
+      context: ./
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    depends_on:
+      - postgresql
+    restart: always
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    networks:
+      - web_api
+
+  postgresql:
+    image: ${POSTGRES_IMAGE}
+    container_name: ${POSTGRES_CONTAINER_NAME}
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ${POSTGRES_VOLUME}
+    networks:
+      - ${POSTGRES_NETWORK}
+
+networks:
+  web_api:
+    driver: bridge

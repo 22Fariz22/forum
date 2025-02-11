@@ -1,0 +1,52 @@
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+type User {
+  id: ID!
+  username: String!
+}
+
+type Post {
+  id: ID!
+  title: String!
+  content: String!
+  allowComments: Boolean!
+  authorID: ID!
+  haveComments: Boolean!
+  # Пагинация комментариев (только верхнего уровня)
+  comments(limit: Int = 10, offset: Int = 0): [Comment!]!
+}
+
+type Comment {
+  id: ID!
+  postID: ID!
+  parentID: ID
+  content: String!
+  author: User!
+  haveComments: Boolean!
+}
+
+type Query {
+  posts: [Post!]!
+  post(id: ID!): Post
+  getReplies(parentID: ID!): [Comment!]!
+}
+
+type Mutation {
+  createPost(
+    title: String!
+    content: String!
+    allowComments: Boolean!
+    author: ID!
+  ): Post!
+  createCommentOnPost(postID: ID!, content: String!, author: ID!): Comment!
+  replyToComment(parentID: ID!, content: String!, author: ID!): Comment!
+  createUser(username: String!): User!
+}
+
+type Subscription {
+  commentAdded(postID: ID!): Comment!
+}
