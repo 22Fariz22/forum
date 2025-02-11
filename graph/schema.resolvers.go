@@ -12,6 +12,7 @@ import (
 	graphModel "github.com/22Fariz22/forum/graph/model"
 	commonModel "github.com/22Fariz22/forum/internal/model"
 	"github.com/google/uuid"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // CreatePost is the resolver for the createPost field.
@@ -44,8 +45,7 @@ func (r *mutationResolver) CreatePost(ctx context.Context, title string, content
 	//сохраняем в базе
 	err = r.Repo.CreatePost(newPost)
 	if err != nil {
-		//internalErrorServer 500
-		return nil, err
+		return nil, newGraphQLError("ошибка на сервере", "500")
 	}
 
 	return newPostQLModel, nil
@@ -58,7 +58,8 @@ func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID strin
 	// Проверяем, существует ли пользователь с таким ID
 	user, err := r.Repo.GetUserByID(author)
 	if err != nil {
-		return nil, errors.New("пользователь не найден")
+		return nil, newGraphQLError("пользователь не найден", "404")
+
 	}
 
 	// Проверяем, существует ли пост
@@ -79,8 +80,9 @@ func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID strin
 	c, err := r.Repo.CreateCommentOnPost(context.Background(), comment)
 	if err != nil {
 		fmt.Println("err in resolver call on r.Repo.CreateCommentOnPost: ", err)
-		return nil, err
+		return nil, newGraphQLError("ошибка на сервере", "500")
 	}
+
 	fmt.Println("c in resolver :", c)
 
 	return &graphModel.Comment{
@@ -98,8 +100,7 @@ func (r *mutationResolver) ReplyToComment(ctx context.Context, parentID string, 
 	// Проверяем, существует ли пользователь с таким ID
 	user, err := r.Repo.GetUserByID(author)
 	if err != nil {
-		//вернуть HTTP 404 (Not Found)
-		return nil, errors.New("пользователь не найден")
+		return nil, newGraphQLError("пользователь не найден", "404")
 	}
 
 	// Создаём вложенный комментарий
@@ -113,8 +114,7 @@ func (r *mutationResolver) ReplyToComment(ctx context.Context, parentID string, 
 	// Добавляем комментарий
 	c, err := r.Repo.ReplyToComment(context.Background(), comment)
 	if err != nil {
-		//если ошибка "родительский коментарий не найден", вернуть HTTP 404 (Not Found)
-		return nil, err
+		return nil, newGraphQLError("родительский коментарий не найден", "404")
 	}
 
 	return &graphModel.Comment{
@@ -140,9 +140,8 @@ func (r *mutationResolver) CreateUser(ctx context.Context, username string) (*gr
 
 	// Создаем пользователя
 	if err := r.Repo.CreateUser(user); err != nil {
-		//вернуть 500 Internal Server Error
 		fmt.Println("err:", err)
-		return nil, err
+		return nil, newGraphQLError("ошибка на сервере", "500")
 	}
 
 	userGraphQL := graphModel.User{
@@ -160,8 +159,7 @@ func (r *queryResolver) Posts(ctx context.Context) ([]*graphModel.Post, error) {
 	// Получаем посты из репозитория
 	posts, err := r.Repo.GetPosts()
 	if err != nil {
-		//internalErrorServer 500
-		return nil, err
+		return nil, newGraphQLError("ошибка на сервере", "500")
 	}
 
 	// Преобразуем в GraphQL-модель и добавим в список
@@ -187,20 +185,13 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*graphModel.Post, 
 	// Получаем пост
 	post, err := r.Repo.GetPostByID(id)
 	if err != nil {
-		//вернуть HTTP 404 (Not Found)
-		return nil, err
+		return nil, newGraphQLError("пост не найден", "404")
 	}
 
 	// Загружаем комментарии с пагинацией
 	comments, err := r.Repo.GetCommentsByPostID(post.ID, 10, 0)
 	if err != nil {
-		//internalErrorServer 500
-		return nil, err
-	}
-
-	fmt.Println("comments in resolver:") //прологируем все комменты
-	for i, v := range comments {
-		fmt.Println(i, v.Content, v.Author.Username, v.HaveComments)
+		return nil, newGraphQLError("ошибка на сервере", "500")
 	}
 
 	// Преобразуем комментарии в graphModel и добавим в список
@@ -236,7 +227,7 @@ func (r *queryResolver) GetReplies(ctx context.Context, parentID string) ([]*gra
 	// Получаем список вложенных комментариев
 	replies, err := r.Repo.GetReplies(parentID)
 	if err != nil {
-		return nil, err
+		return nil, newGraphQLError("ошибка на сервере", "500")
 	}
 
 	// Преобразуем их в GraphQL-модель
@@ -272,3 +263,13 @@ func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionRes
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
+
+// Функция для создания ошибки с кодом
+func newGraphQLError(message string, code string) *gqlerror.Error {
+	return &gqlerror.Error{
+		Message: message,
+		Extensions: map[string]interface{}{
+			"code": code, // сюда можно положить HTTP-код
+		},
+	}
+}
