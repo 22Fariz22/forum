@@ -242,6 +242,7 @@ func (r *queryResolver) GetReplies(ctx context.Context, parentID string) ([]*gra
 	// Преобразуем их в GraphQL-модель
 	var gqlReplies []*graphModel.Comment
 	for _, c := range replies {
+		fmt.Println("coment in resolver:", c.Username)
 		gqlReplies = append(gqlReplies, &graphModel.Comment{
 			ID:       c.ID,
 			PostID:   c.PostID,

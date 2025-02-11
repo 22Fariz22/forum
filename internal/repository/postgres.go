@@ -191,7 +191,73 @@ func (r *PostgresRepository) CreateCommentOnPost(ctx context.Context, comment *m
 }
 
 func (r *PostgresRepository) ReplyToComment(ctx context.Context, comment *model.Comment) (*model.Comment, error) {
-	return nil, nil
+	fmt.Println("in repo pg ReplyToComment()")
+	fmt.Println("comment:", comment)
+	fmt.Println("comment.Author:", comment.Author)
+	if comment.ParentID == nil {
+		fmt.Println("comment.ParentID == nil")
+	}
+
+	// Проверяем, существует ли родительский комментарий
+	var parentComment model.Comment
+	query := `
+		SELECT id, post_id AS "post_id"
+		FROM comments
+		WHERE id = $1
+	`
+
+	fmt.Println("ищем comment.ParentID:", *comment.ParentID)
+
+	err := r.db.GetContext(ctx, &parentComment, query, *comment.ParentID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			fmt.Println("err in db.GetContext. error.Is", err)
+			return nil, fmt.Errorf("родительский комментарий не найден") // 404 Not Found
+		}
+		fmt.Println("err in db.GetContext", err)
+		return nil, fmt.Errorf("failed to fetch parent comment: %w", err) // 500 Internal Server Error
+	}
+
+	// Устанавливаем post_id для нового комментария
+	comment.PostID = parentComment.PostID
+
+	// SQL-запрос для создания нового комментария
+	insertQuery := `
+		INSERT INTO comments (id, post_id, parent_id, content, author_id, username)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+	// var parentID *string
+	fmt.Println("comment.PostID: ", comment.PostID)
+	// fmt.Printf("coment.AuthorID:%s comment.username:%s")
+	// Выполняем запрос на вставку
+	_, err = r.db.ExecContext(ctx, insertQuery,
+		comment.ID,
+		comment.PostID,
+		comment.ParentID,
+		// parentID,
+		comment.Content,
+		comment.Author.ID,
+		comment.Author.Username,
+	)
+	if err != nil {
+		fmt.Println("err in  r.db.ExecContext:", err)
+		return nil, fmt.Errorf("failed to create comment: %w", err) // 500 Internal Server Error
+	}
+
+	// Обновляем флаг have_comments у родительского комментария
+	updateQuery := `
+		UPDATE comments
+		SET have_comments = true
+		WHERE id = $1
+	`
+	_, err = r.db.ExecContext(ctx, updateQuery, *comment.ParentID)
+	if err != nil {
+		fmt.Println("r.db.ExecContext(ctx, updateQuery, *comment.ParentID) err:", err)
+		return nil, fmt.Errorf("failed to update parent comment: %w", err) // 500 Internal Server Error
+	}
+
+	// Возвращаем созданный комментарий
+	return comment, nil
 }
 
 func (r *PostgresRepository) GetCommentsByPostID(postID string, limit, offset int) ([]*model.Comment, error) {
@@ -201,7 +267,7 @@ func (r *PostgresRepository) GetCommentsByPostID(postID string, limit, offset in
 	query := `
 		SELECT id, post_id, parent_id, content, author_id, username, have_comments
 		FROM comments
-		WHERE post_id = $1
+		WHERE post_id = $1 and parent_id IS NULL 
 		ORDER BY id DESC
 		LIMIT $2 OFFSET $3
 	`
@@ -250,8 +316,62 @@ func (r *PostgresRepository) GetCommentsByPostID(postID string, limit, offset in
 	return comments, nil
 }
 
+// GetReplies получение вложенных комментариев
 func (r *PostgresRepository) GetReplies(parentID string) ([]*model.Comment, error) {
-	return nil, nil
+	fmt.Println("in repo GetReplies. parentID:", parentID)
+
+	// SQL-запрос для получения вложенных комментариев
+	query := `
+		SELECT id, post_id, parent_id, content, author_id, username, have_comments
+		FROM comments
+		WHERE parent_id = $1 
+		ORDER BY id DESC
+	`
+
+	// Выполняем запрос
+	rows, err := r.db.Query(query, parentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch replies: %w", err)
+	}
+	defer rows.Close()
+
+	// Сканируем результаты в структуру Comment
+	var replies []*model.Comment
+	for rows.Next() {
+		var comment model.Comment
+
+		err := rows.Scan(
+			&comment.ID,
+			&comment.PostID,
+			&comment.ParentID,
+			&comment.Content,
+			&comment.AuthorID,
+			&comment.Username,
+			&comment.HaveComments,
+		)
+		if err != nil {
+			fmt.Printf("Error during scan: %v\n", err)
+			return nil, fmt.Errorf("failed to scan reply: %w", err)
+		}
+		fmt.Println("in repo comment:", &comment)
+		fmt.Println("in repo comment.Username:", comment.Username)
+
+		// Создаем объект автора
+		author := &model.User{
+			ID:       comment.AuthorID,
+			Username: comment.Username,
+		}
+		comment.Author = author
+
+		replies = append(replies, &comment)
+	}
+
+	// Проверяем, не возникла ли ошибка при итерации по строкам
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error during rows iteration: %w", err)
+	}
+
+	return replies, nil
 }
 
 func isDuplicateKeyError(err error) bool {

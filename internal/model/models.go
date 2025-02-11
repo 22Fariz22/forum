@@ -19,12 +19,12 @@ type Post struct {
 
 // Comment – модель комментария
 type Comment struct {
-	ID           string  `json:"id" gorm:"primaryKey;type:uuid"`
-	PostID       string  `json:"postID" gorm:"type:uuid;not null"`
-	ParentID     *string `json:"parentID" gorm:"type:uuid"` // Если nil, то комментарий верхнего уровня
-	Content      string  `json:"content" gorm:"type:text;not null"`
+	ID           string  `json:"id" db:"id" gorm:"primaryKey;type:uuid"`
+	PostID       string  `json:"postID" db:"post_id" gorm:"type:uuid;not null"`
+	ParentID     *string `json:"parentID" db:"parent_id" gorm:"type:uuid"` // Если nil, то комментарий верхнего уровня
+	Content      string  `json:"content" db:"content" gorm:"type:text;not null"`
 	Author       *User   `json:"author" gorm:"-"`
-	AuthorID     string  `json:"authorID" gorm:"foreignKey:AuthorID;references:ID"`
-	Username     string  `json:"username" gorm:"type:varchar(20);not null"`
-	HaveComments bool    `json:"haveComments" gorm:"default:false"`
+	AuthorID     string  `json:"authorID" db:"author_id" gorm:"foreignKey:AuthorID;references:ID"`
+	Username     string  `json:"username" db:"username" gorm:"type:varchar(20);not null"`
+	HaveComments bool    `json:"haveComments" db:"have_comments" gorm:"default:false"`
 }
