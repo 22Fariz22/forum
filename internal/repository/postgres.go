@@ -105,9 +105,10 @@ func (r *PostgresRepository) GetPosts(offset int32, limit int32) ([]*model.Post,
 		SELECT id, title, content, allow_comments, author_id, have_comments, created_at
 		FROM posts
 		ORDER BY created_at ASC
+		LIMIT $1 OFFSET $2
 	`
 
-	rows, err := r.db.Query(query)
+	rows, err := r.db.Query(query, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch posts: %w", err)
 	}
@@ -126,7 +127,8 @@ func (r *PostgresRepository) GetPosts(offset int32, limit int32) ([]*model.Post,
 			&post.CreatedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan post: %w", err)
+			fmt.Printf("Error during scan: %v\n", err)
+			continue // Пропускаем ошибочную строку, но продолжаем обработку
 		}
 		posts = append(posts, post)
 	}
@@ -162,14 +164,6 @@ func (r *PostgresRepository) GetPostByID(id string) (*model.Post, error) {
 		}
 		return nil, fmt.Errorf("failed to fetch post: %w", err)
 	}
-
-	// Теперь получаем комментарии для поста
-	comments, err := r.GetCommentsByPostID(post.ID, 10, 0)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch comments: %w", err)
-	}
-
-	post.Comments = comments
 
 	return post, nil
 }
@@ -258,7 +252,10 @@ func (r *PostgresRepository) ReplyToComment(ctx context.Context, comment *model.
 }
 
 // GetCommentsByPostID получаем верхнеуровневые коментарии к посту используя пагинацию
-func (r *PostgresRepository) GetCommentsByPostID(postID string, limit, offset int) ([]*model.Comment, error) {
+func (r *PostgresRepository) GetCommentsByPostID(postID string, offset, limit int) ([]*model.Comment, error) {
+	fmt.Println("in repo pg GetCommentsByPostID ")
+	fmt.Printf("Executing query: postID=%s, limit=%d, offset=%d\n", postID, limit, offset)
+
 	// SQL-запрос для получения комментариев с пагинацией
 	query := `
 		SELECT id, post_id, parent_id, content, author_id, username, have_comments, created_at
@@ -310,6 +307,8 @@ func (r *PostgresRepository) GetCommentsByPostID(postID string, limit, offset in
 		return nil, fmt.Errorf("error during rows iteration: %w", err)
 	}
 
+	fmt.Println("in repo len comments:", len(comments))
+
 	return comments, nil
 }
 
@@ -321,10 +320,11 @@ func (r *PostgresRepository) GetReplies(parentID string, offset, limit int) ([]*
 		FROM comments
 		WHERE parent_id = $1 
 		ORDER BY created_at ASC
+		LIMIT $2 OFFSET $3
 	`
 
 	// Выполняем запрос
-	rows, err := r.db.Query(query, parentID)
+	rows, err := r.db.Query(query, parentID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch replies: %w", err)
 	}

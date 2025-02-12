@@ -255,7 +255,7 @@ func (r *InMemoryRepository) SubscribeToComments(postID string) <-chan *model.Co
 
 // GetCommentsByPostID получает комментарии верхнего уровня
 func (r *InMemoryRepository) GetCommentsByPostID(postID string, offset, limit int) ([]*model.Comment, error) {
-	fmt.Println("in repo GetCommentsByPostID")
+	fmt.Println("in repo inmemory GetCommentsByPostID")
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -290,18 +290,6 @@ func (r *InMemoryRepository) GetCommentsByPostID(postID string, offset, limit in
 
 // GetReplies возвращает вложенные комментарии по parentID
 func (r *InMemoryRepository) GetReplies(parentID string, offset, limit int) ([]*model.Comment, error) {
-	// fmt.Println("in repo GetReplies")
-	// r.mu.RLock()
-	// defer r.mu.RUnlock()
-	// fmt.Println("	// Проверяем, существуют ли вложенные комментарии для parentID")
-	// // Проверяем, существуют ли вложенные комментарии для parentID
-	// replies, exists := r.replyComments[parentID]
-	// if !exists {
-	// 	return nil, errors.New("вложенные комментарии не найдены")
-	// }
-	//
-	// return replies, nil
-
 	fmt.Println("in repo GetReplies")
 	r.mu.RLock()
 	defer r.mu.RUnlock()
