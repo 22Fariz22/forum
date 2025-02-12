@@ -47,13 +47,11 @@ func (r *InMemoryRepository) CreateUser(user *model.User) error {
 
 // GetUserByID проверяет существование пользователя
 func (r *InMemoryRepository) GetUserByID(id string) (*model.User, error) {
-	fmt.Println("in repo GetUserByID")
 	r.mu.RLock()
 	defer func() {
 		r.mu.RUnlock()
 	}()
 
-	fmt.Println("user, exists := r.users[id]")
 	user, exists := r.users[id]
 
 	if !exists {
@@ -115,8 +113,6 @@ func (r *InMemoryRepository) GetPosts(offset int32, limit int32) ([]*model.Post,
 
 	// Возвращаем срез постов
 	return r.sortedPosts[offset:end], nil
-
-	// return r.sortedPosts, nil
 }
 
 // GetPostByID возвращает пост по ID
@@ -133,17 +129,11 @@ func (r *InMemoryRepository) GetPostByID(id string) (*model.Post, error) {
 
 // CreateCommentOnPost добавляет комментарий к посту
 func (r *InMemoryRepository) CreateCommentOnPost(ctx context.Context, comment *model.Comment) (*model.Comment, error) {
-	fmt.Println("in immemory CreateCommentOnPost")
-
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	fmt.Println("	// Проверяем, является ли комментарий верхнеуровневым")
 	// Проверяем, является ли комментарий верхнеуровневым
 	if comment.ParentID == nil {
-		fmt.Println("Комментарий является верхнеуровневым")
-
-		fmt.Println("		// Инициализируем массив комментариев для поста, если его нет")
 		// Инициализируем массив комментариев для поста, если его нет
 		if _, ok := r.comments[comment.PostID]; !ok {
 			r.comments[comment.PostID] = []*model.Comment{}
@@ -151,21 +141,16 @@ func (r *InMemoryRepository) CreateCommentOnPost(ctx context.Context, comment *m
 
 		// Добавляем комментарий
 		comment.CreatedAt = time.Now()
-		fmt.Println("		// Добавляем комментарий")
 		r.comments[comment.PostID] = append(r.comments[comment.PostID], comment)
 
-		fmt.Println("		r.replyComments[comment.ID] = []*model.Comment{}")
 		// Инициализируем массив для вложенных комментариев
 		r.replyComments[comment.ID] = []*model.Comment{}
 
 		return comment, nil
 	}
 
-	fmt.Println("	// Проверяем, существует ли родительский комментарий")
 	// Проверяем, существует ли родительский комментарий
 	parentID := *comment.ParentID
-
-	fmt.Println("Проверяем, инициализирован ли массив ответов для родительского комментария:", parentID)
 
 	replies, ok := r.replyComments[parentID]
 	if !ok {
@@ -194,34 +179,27 @@ func sortCommentsByCreatedAt(comments []*model.Comment) {
 
 // ReplyToComment добавляет ответ на комментарий
 func (r *InMemoryRepository) ReplyToComment(ctx context.Context, comment *model.Comment) (*model.Comment, error) {
-	fmt.Println("in inmemory ReplyToComment")
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	fmt.Println("// Проверяем, указан ли parentID")
 	// Проверяем, указан ли parentID
 	if comment.ParentID == nil {
 		return nil, errors.New("parentID не может быть nil")
 	}
 
-	fmt.Println("parentID := *comment.ParentID")
 	parentID := *comment.ParentID
 
-	fmt.Println("	// Проверяем, существует ли родительский комментарий в `replyComments`")
 	// Проверяем, существует ли родительский комментарий в `replyComments`
 	if _, exists := r.replyComments[parentID]; !exists {
 		return nil, errors.New("родительский комментарий не найден")
 	}
 
-	fmt.Println("		// Добавляем время создания")
 	// Добавляем время создания
 	comment.CreatedAt = time.Now()
 
-	fmt.Println("	// Добавляем комментарий в список ответов")
 	// Добавляем комментарий в список ответов
 	r.replyComments[parentID] = append(r.replyComments[parentID], comment)
 
-	fmt.Println("	// Сортируем вложенные комментарии по времени (новые сверху)")
 	// Сортируем вложенные комментарии по времени (новые сверху)
 	sortCommentsByCreatedAt(r.replyComments[parentID])
 
@@ -255,11 +233,9 @@ func (r *InMemoryRepository) SubscribeToComments(postID string) <-chan *model.Co
 
 // GetCommentsByPostID получает комментарии верхнего уровня
 func (r *InMemoryRepository) GetCommentsByPostID(postID string, offset, limit int) ([]*model.Comment, error) {
-	fmt.Println("in repo inmemory GetCommentsByPostID")
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	fmt.Println("	// Проверяем, есть ли комментарии у поста")
 	// Проверяем, есть ли комментарии у поста
 	comments, exists := r.comments[postID]
 	if !exists || len(comments) == 0 {
@@ -267,7 +243,6 @@ func (r *InMemoryRepository) GetCommentsByPostID(postID string, offset, limit in
 		return []*model.Comment{}, nil
 	}
 
-	fmt.Println("	// Проверяем, что offset не выходит за границы")
 	// Проверяем, что offset не выходит за границы
 	if offset < 0 || offset >= len(comments) {
 		return []*model.Comment{}, nil
@@ -279,22 +254,14 @@ func (r *InMemoryRepository) GetCommentsByPostID(postID string, offset, limit in
 		end = len(comments)
 	}
 
-	fmt.Println("Получены комментарии:", comments)
-	fmt.Println("Offset:", offset, "Limit:", limit)
-	fmt.Println("Длина списка комментариев:", len(comments))
-
-	fmt.Println("Возвращаемый диапазон:", comments[offset:end])
-
 	return comments[offset:end], nil
 }
 
 // GetReplies возвращает вложенные комментарии по parentID
 func (r *InMemoryRepository) GetReplies(parentID string, offset, limit int) ([]*model.Comment, error) {
-	fmt.Println("in repo GetReplies")
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	fmt.Println("	// Проверяем, существуют ли вложенные комментарии для parentID:", parentID)
 	replies, exists := r.replyComments[parentID]
 	if !exists || len(replies) == 0 {
 		fmt.Println("	Нет вложенных комментариев для parentID:", parentID)
@@ -302,7 +269,6 @@ func (r *InMemoryRepository) GetReplies(parentID string, offset, limit int) ([]*
 	}
 
 	// Проверяем, что offset не выходит за границы
-	fmt.Println("	// Проверка границ offset и limit")
 	if offset < 0 || offset >= len(replies) {
 		fmt.Println("		Offset выходит за пределы списка. Offset:", offset, "Length of replies:", len(replies))
 		return []*model.Comment{}, nil
@@ -314,10 +280,6 @@ func (r *InMemoryRepository) GetReplies(parentID string, offset, limit int) ([]*
 		fmt.Println("	Конечный индекс превышает длину списка, устанавливаем end:", len(replies))
 		end = len(replies)
 	}
-
-	// Логируем, какие элементы возвращаем
-	fmt.Println("	Возвращаем комментарии с offset:", offset, "до end:", end)
-	fmt.Println("	Комментариев на возврат:", len(replies[offset:end]))
 
 	return replies[offset:end], nil
 }

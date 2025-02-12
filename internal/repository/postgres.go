@@ -207,7 +207,6 @@ func (r *PostgresRepository) ReplyToComment(ctx context.Context, comment *model.
 			fmt.Println("err in db.GetContext. error.Is", err)
 			return nil, fmt.Errorf("родительский комментарий не найден") // 404 Not Found
 		}
-		fmt.Println("err in db.GetContext", err)
 		return nil, fmt.Errorf("failed to fetch parent comment: %w", err) // 500 Internal Server Error
 	}
 
@@ -253,9 +252,6 @@ func (r *PostgresRepository) ReplyToComment(ctx context.Context, comment *model.
 
 // GetCommentsByPostID получаем верхнеуровневые коментарии к посту используя пагинацию
 func (r *PostgresRepository) GetCommentsByPostID(postID string, offset, limit int) ([]*model.Comment, error) {
-	fmt.Println("in repo pg GetCommentsByPostID ")
-	fmt.Printf("Executing query: postID=%s, limit=%d, offset=%d\n", postID, limit, offset)
-
 	// SQL-запрос для получения комментариев с пагинацией
 	query := `
 		SELECT id, post_id, parent_id, content, author_id, username, have_comments, created_at
@@ -306,8 +302,6 @@ func (r *PostgresRepository) GetCommentsByPostID(postID string, offset, limit in
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error during rows iteration: %w", err)
 	}
-
-	fmt.Println("in repo len comments:", len(comments))
 
 	return comments, nil
 }

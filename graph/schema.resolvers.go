@@ -49,8 +49,6 @@ func (r *mutationResolver) CreatePost(ctx context.Context, title string, content
 
 // CreateCommentOnPost создаёт комментарий к посту
 func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID string, content string, author string) (*graphModel.Comment, error) {
-	fmt.Println("in resolver CreateCommentOnPost")
-	fmt.Println("Проверяем, существует ли пользователь с таким ID")
 	// Проверяем, существует ли пользователь с таким ID
 	user, err := r.Repo.GetUserByID(author)
 	if err != nil {
@@ -59,7 +57,6 @@ func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID strin
 
 	}
 
-	fmt.Println(" Проверяем, существует ли пост")
 	// Проверяем, существует ли пост
 	_, err = r.Repo.GetPostByID(postID)
 	if err != nil {
@@ -67,7 +64,6 @@ func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID strin
 		return nil, err
 	}
 
-	fmt.Println("	// Создаём комментарий")
 	// Создаём комментарий
 	comment := &commonModel.Comment{
 		ID:      uuid.New().String(),
@@ -76,7 +72,6 @@ func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID strin
 		Author:  user,
 	}
 
-	fmt.Println("r.Repo.CreateCommentOnPost(context.Background(), comment)")
 	// Добавляем комментарий
 	c, err := r.Repo.CreateCommentOnPost(context.Background(), comment)
 	if err != nil {
@@ -95,10 +90,6 @@ func (r *mutationResolver) CreateCommentOnPost(ctx context.Context, postID strin
 
 // ReplyToComment создаёт ответ на комментарий
 func (r *mutationResolver) ReplyToComment(ctx context.Context, postID string, parentID string, content string, author string) (*graphModel.Comment, error) {
-	fmt.Println("in resolver ReplyToComment")
-	fmt.Println("Проверяем, существует ли пользователь с таким ID")
-
-	fmt.Println("Проверяем, существует ли пользователь с таким ID")
 	// Проверяем, существует ли пользователь с таким ID
 	user, err := r.Repo.GetUserByID(author)
 	if err != nil {
@@ -106,7 +97,6 @@ func (r *mutationResolver) ReplyToComment(ctx context.Context, postID string, pa
 		return nil, utils.NewGraphQLError("пользователь не найден", "404")
 	}
 
-	fmt.Println("// Создаём вложенный комментарий")
 	// Создаём вложенный комментарий
 	comment := &commonModel.Comment{
 		ID:       uuid.New().String(),
@@ -116,7 +106,6 @@ func (r *mutationResolver) ReplyToComment(ctx context.Context, postID string, pa
 		Author:   user,
 	}
 
-	fmt.Println("// Добавляем комментарий")
 	// Добавляем комментарий
 	c, err := r.Repo.ReplyToComment(context.Background(), comment)
 	if err != nil {
@@ -190,17 +179,12 @@ func (r *queryResolver) Post(ctx context.Context, id string, offset int32, limit
 		return nil, utils.NewGraphQLError("пост не найден", "404")
 	}
 
-	fmt.Println(" id string int(offset), int(limit)", id, int(offset), int(limit))
-
 	// Загружаем комментарии с пагинацией
 	comments, err := r.Repo.GetCommentsByPostID(post.ID, int(offset), int(limit))
 	if err != nil {
 		return nil, utils.NewGraphQLError("ошибка на сервере", "500")
 	}
 
-	fmt.Println("len(comments): ", len(comments))
-
-	fmt.Println("	// Преобразуем комментарии в graphModel и добавим в список")
 	// Преобразуем комментарии в graphModel и добавим в список
 	var graphComments []*graphModel.Comment
 	for _, comment := range comments {
