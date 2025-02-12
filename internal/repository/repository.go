@@ -14,7 +14,7 @@ type Repository interface {
 
 	// Методы для постов
 	CreatePost(post *model.Post) error
-	GetPosts() ([]*model.Post, error)
+	GetPosts(offset int32, limit int32) ([]*model.Post, error)
 	GetPostByID(id string) (*model.Post, error)
 
 	// Методы для комментариев

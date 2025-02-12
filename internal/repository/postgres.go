@@ -100,7 +100,7 @@ func (r *PostgresRepository) CreatePost(post *model.Post) error {
 }
 
 // GetPosts получаем все посты
-func (r *PostgresRepository) GetPosts() ([]*model.Post, error) {
+func (r *PostgresRepository) GetPosts(offset int32, limit int32) ([]*model.Post, error) {
 	query := `
 		SELECT id, title, content, allow_comments, author_id, have_comments, created_at
 		FROM posts

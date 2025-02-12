@@ -35,9 +35,9 @@ type Comment {
 }
 
 type Query {
-  posts: [Post!]!
-  post(id: ID!): Post
-  getReplies(parentID: ID!): [Comment!]!
+  posts(offset: Int!, limit: Int!): [Post!]!
+  post(id: ID!, offset: Int!, limit: Int!): Post
+  getReplies(parentID: ID!, offset: Int!, limit: Int!): [Comment!]!
 }
 
 type Mutation {
@@ -48,7 +48,12 @@ type Mutation {
     author: ID!
   ): Post!
   createCommentOnPost(postID: ID!, content: String!, author: ID!): Comment!
-  replyToComment(parentID: ID!, content: String!, author: ID!): Comment!
+  replyToComment(
+    postID: ID!
+    parentID: ID!
+    content: String!
+    author: ID!
+  ): Comment!
   createUser(username: String!): User!
 }
 
