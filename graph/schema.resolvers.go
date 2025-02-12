@@ -232,7 +232,7 @@ func (r *queryResolver) Post(ctx context.Context, id string, offset int32, limit
 // GetReplies возвращает вложенные комментарии
 func (r *queryResolver) GetReplies(ctx context.Context, parentID string, offset int32, limit int32) ([]*graphModel.Comment, error) {
 	// Получаем список вложенных комментариев
-	replies, err := r.Repo.GetReplies(parentID)
+	replies, err := r.Repo.GetReplies(parentID, int(offset), int(limit))
 	if err != nil {
 		return nil, utils.NewGraphQLError("ошибка на сервере", "500")
 	}

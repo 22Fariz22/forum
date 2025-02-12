@@ -20,7 +20,7 @@ type Repository interface {
 	// Методы для комментариев
 	CreateCommentOnPost(ctx context.Context, comment *model.Comment) (*model.Comment, error)
 	ReplyToComment(ctx context.Context, comment *model.Comment) (*model.Comment, error)
-	GetReplies(parentID string) ([]*model.Comment, error)
+	GetReplies(parentID string, offset, limit int) ([]*model.Comment, error)
 
 	// // Получаем комментарии верхнего уровня для поста с пагинацией
 	GetCommentsByPostID(postID string, limit, offset int) ([]*model.Comment, error)

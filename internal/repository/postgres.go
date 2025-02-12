@@ -314,7 +314,7 @@ func (r *PostgresRepository) GetCommentsByPostID(postID string, limit, offset in
 }
 
 // GetReplies получение вложенных комментариев по id родительского коментария
-func (r *PostgresRepository) GetReplies(parentID string) ([]*model.Comment, error) {
+func (r *PostgresRepository) GetReplies(parentID string, offset, limit int) ([]*model.Comment, error) {
 	// SQL-запрос для получения вложенных комментариев
 	query := `
 		SELECT id, post_id, parent_id, content, author_id, username, have_comments, created_at

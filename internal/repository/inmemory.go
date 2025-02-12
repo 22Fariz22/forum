@@ -289,28 +289,47 @@ func (r *InMemoryRepository) GetCommentsByPostID(postID string, offset, limit in
 }
 
 // GetReplies возвращает вложенные комментарии по parentID
-func (r *InMemoryRepository) GetReplies(parentID string) ([]*model.Comment, error) {
-	// r.mu.Lock()
-	// defer r.mu.Unlock()
-	//
-	// var replies []*model.Comment
-	// for _, comment := range r.Comments {
-	// 	if comment.ParentID != nil && *comment.ParentID == parentID {
-	// 		replies = append(replies, comment)
-	// 	}
+func (r *InMemoryRepository) GetReplies(parentID string, offset, limit int) ([]*model.Comment, error) {
+	// fmt.Println("in repo GetReplies")
+	// r.mu.RLock()
+	// defer r.mu.RUnlock()
+	// fmt.Println("	// Проверяем, существуют ли вложенные комментарии для parentID")
+	// // Проверяем, существуют ли вложенные комментарии для parentID
+	// replies, exists := r.replyComments[parentID]
+	// if !exists {
+	// 	return nil, errors.New("вложенные комментарии не найдены")
 	// }
 	//
 	// return replies, nil
+
 	fmt.Println("in repo GetReplies")
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	fmt.Println("	// Проверяем, существуют ли вложенные комментарии для parentID")
-	// Проверяем, существуют ли вложенные комментарии для parentID
+
+	fmt.Println("	// Проверяем, существуют ли вложенные комментарии для parentID:", parentID)
 	replies, exists := r.replyComments[parentID]
-	if !exists {
-		return nil, errors.New("вложенные комментарии не найдены")
+	if !exists || len(replies) == 0 {
+		fmt.Println("	Нет вложенных комментариев для parentID:", parentID)
+		return []*model.Comment{}, nil
 	}
 
-	return replies, nil
-	// return nil, nil
+	// Проверяем, что offset не выходит за границы
+	fmt.Println("	// Проверка границ offset и limit")
+	if offset < 0 || offset >= len(replies) {
+		fmt.Println("		Offset выходит за пределы списка. Offset:", offset, "Length of replies:", len(replies))
+		return []*model.Comment{}, nil
+	}
+
+	// Определяем границы среза с учётом лимита
+	end := offset + limit
+	if end > len(replies) {
+		fmt.Println("	Конечный индекс превышает длину списка, устанавливаем end:", len(replies))
+		end = len(replies)
+	}
+
+	// Логируем, какие элементы возвращаем
+	fmt.Println("	Возвращаем комментарии с offset:", offset, "до end:", end)
+	fmt.Println("	Комментариев на возврат:", len(replies[offset:end]))
+
+	return replies[offset:end], nil
 }
